@@ -1,6 +1,6 @@
 #!/bin/bash
 
-d = `date +%Y%m%d-%H%M%S`
+d=`date +%Y%m%d-%H%M%S`
 
 #PBS -S /bin/bash
 #PBS -l mem=6g
@@ -15,5 +15,5 @@ cd $PBS_O_WORKDIR
 echo "Current working directory is `pwd`"
 
 echo "Starting run at: `date`"
-/home/jester/hdpa/target/hdpa-0.0.2-dist/run.sh com.bronzespear.hdpa.TrainCorpus /home/jester/data/nyt-random-d100-t5000 1000 5
+/home/jester/hdpa/target/hdpa-0.0.2-dist/run.sh com.bronzespear.hdpa.TrainHdpa /home/jester/data/nyt-random-d100-t5000 1000 5
 echo "Program diffuse finished with exit code $? at: `date`"
