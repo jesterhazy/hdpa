@@ -54,7 +54,6 @@ public class CorpusRandomizer {
 		
 		File out = new File(System.getProperty("java.io.tmpdir"), "CorpusRandomizer-" + System.currentTimeMillis());
 		out.mkdirs();
-		out.deleteOnExit();
 		
 		LOG.info("writing tmp files to " + out.getAbsolutePath());
 		
@@ -67,7 +66,6 @@ public class CorpusRandomizer {
 		for (CorpusDocument document : source) {
 			String fname = filenameForIndex(randomIds[i]);
 			File f = new File(out, fname);
-			f.deleteOnExit();
 			
 			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(f));
 			oos.writeObject(document);
@@ -89,6 +87,9 @@ public class CorpusRandomizer {
 			File f = new File(out, filenameForIndex(i));
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
 			CorpusDocument document = (CorpusDocument) ois.readObject();
+			ois.close();
+			f.delete();
+			
 			document.setCorpus(source); // needed for dictionary expansion
 			target.addDocument(document);
 			
@@ -99,6 +100,7 @@ public class CorpusRandomizer {
 		
 		target.close();
 		source.close();
+		out.delete();
 	}
 
 	private String filenameForIndex(int i) {
