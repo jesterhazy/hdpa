@@ -1,0 +1,19 @@
+<assembly>
+	<id>dist</id>
+	<formats>
+		<format>dir</format>
+	</formats>
+	<includeBaseDirectory>false</includeBaseDirectory>
+	<dependencySets>
+		<dependencySet>
+			<outputDirectory>lib</outputDirectory>
+		</dependencySet>
+	</dependencySets>
+	<fileSets>
+		<fileSet>
+			<directory>src/main/scripts</directory>
+			<fileMode>755</fileMode>
+			<outputDirectory>.</outputDirectory>
+		</fileSet>
+	</fileSets>
+</assembly>
