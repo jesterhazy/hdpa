@@ -16,4 +16,5 @@ echo "Current working directory is `pwd`"
 
 echo "Starting run at: `date`"
 /home/jester/hdpa/target/hdpa-0.0.2-dist/run.sh com.bronzespear.hdpa.TrainHdpa /home/jester/data/nyt-random-d100-t5000 1000 5
-echo "Program diffuse finished with exit code $? at: `date`"
+echo "Program finished with exit code $? at: `date`"
+
