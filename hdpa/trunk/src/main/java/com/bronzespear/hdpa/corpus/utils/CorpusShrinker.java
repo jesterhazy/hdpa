@@ -49,7 +49,7 @@ public class CorpusShrinker {
 		}	
 	
 		for (Document doc : source) {
-			if (targetDocumentCount == 0 || includeCurrentDocument()) {
+			if (includeCurrentDocument()) {
 				RestrictedVocabularyDocument shrunk = new RestrictedVocabularyDocument(doc, topTerms);
 //              opportunity to chop more stop words or patterns
 //				FilteredDocument shrunk = new FilteredDocument(doc); 
@@ -83,18 +83,21 @@ public class CorpusShrinker {
 	}
 	
 	private boolean includeCurrentDocument() {
-		boolean include = false;
-		int needed = targetDocumentCount - target.getDocumentCount();
+		boolean include = targetDocumentCount <= 0;
 		
-		if (needed > 0) {
-			int remaining = source.getDocumentCount() - sourceDocsSeen;
+		if (!include) {		
+			int needed = targetDocumentCount - target.getDocumentCount();
 			
-			if (needed < remaining) {
-				include = Math.random() < (double) needed / remaining;
-			}
-			
-			else {				
-				include = true;
+			if (needed > 0) {
+				int remaining = source.getDocumentCount() - sourceDocsSeen;
+				
+				if (needed < remaining) {
+					include = Math.random() < (double) needed / remaining;
+				}
+				
+				else {				
+					include = true;
+				}
 			}
 		}
 		
