@@ -4,6 +4,7 @@ d=`date +%Y%m%d-%H%M%S`
 job=`basename $0`
 
 #PBS -S /bin/bash
+#PBS -l walltime=02:00:00
 #PBS -l mem=6g
 #PBS -r n
 #PBS -N $job
