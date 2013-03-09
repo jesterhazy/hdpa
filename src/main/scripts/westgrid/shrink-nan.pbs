@@ -1,22 +1,15 @@
 #!/bin/bash
-
-d=`date +%Y%m%d-%H%M%S`
-job=`basename $0`
-
 #PBS -S /bin/bash
-#PBS -l walltime=02:00:00
+#PBS -l walltime=24:00:00
 #PBS -l mem=6g
 #PBS -r n
-#PBS -N $job
 #PBS -M jonathan.esterhazy@gmail.com
 #PBS -m bea
-#PBS -o $job.out.$d
-#PBS -e $job.err.$d
 
 cd $PBS_O_WORKDIR
 echo "Current working directory is `pwd`"
 
 echo "Starting run at: `date`"
-/home/jester/hdpa/target/hdpa-0.0.2-dist/run.sh com.bronzespear.hdpa.corpus.utils.CorpusShrinker /home/jester/data/nan-random 0 5000 1000 1000 1000
+/home/jester/hdpa/target/hdpa-0.0.2-dist/run.sh com.bronzespear.hdpa.corpus.utils.CorpusShrinker /home/jester/data/nan-random 0 5000
 echo "Program finished with exit code $? at: `date`"
 
