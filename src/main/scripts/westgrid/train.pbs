@@ -1,16 +1,10 @@
 #!/bin/bash
-
-d=`date +%Y%m%d-%H%M%S`
-
 #PBS -S /bin/bash
 #PBS -l walltime=02:00:00
 #PBS -l mem=6g
 #PBS -r n
-#PBS -N train-$JOBID
 #PBS -M jonathan.esterhazy@gmail.com
 #PBS -m bea
-#PBS -o train.out.$d
-#PBS -e train.err.$d
 
 cd $PBS_O_WORKDIR
 echo "Current working directory is `pwd`"
