@@ -1,11 +1,10 @@
 package com.bronzespear.hdpa.corpus;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,7 +39,7 @@ public class Dictionary {
 	
 	public void save(File file) throws IOException {
 		LOG.info("saving dictionary to: " + file.getAbsolutePath());
-		PrintWriter pw = new PrintWriter(new BufferedOutputStream(new FileOutputStream(file)));
+		PrintWriter pw = new PrintWriter(file, "UTF-8");
 		for (String term : terms) {
 			pw.println(term);
 		}
@@ -53,7 +52,7 @@ public class Dictionary {
 	public void read(File file) throws IOException {
 		reading = true;
 		String line = null;
-		BufferedReader reader = new BufferedReader(new FileReader(file));
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
 		while ((line = reader.readLine()) != null) {
 			addTerm(line);
 		}
