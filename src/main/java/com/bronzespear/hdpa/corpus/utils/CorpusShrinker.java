@@ -15,6 +15,7 @@ import com.bronzespear.hdpa.corpus.CorpusMode;
 import com.bronzespear.hdpa.corpus.CorpusReader;
 import com.bronzespear.hdpa.corpus.CorpusWriter;
 import com.bronzespear.hdpa.corpus.Document;
+import com.bronzespear.hdpa.corpus.FilteredDocument;
 import com.bronzespear.hdpa.corpus.RestrictedVocabularyDocument;
 
 public class CorpusShrinker {
@@ -25,6 +26,7 @@ public class CorpusShrinker {
 	private int[] targetTermCounts;
 	private int targetDocumentCount;
 	private int sourceDocsSeen;
+	private boolean filter;
 	
 	public CorpusShrinker(File source, File target, int docs, int[] terms) {
 		this(new CorpusReader(source), new CorpusWriter(target), docs, terms);
@@ -35,6 +37,10 @@ public class CorpusShrinker {
 		this.target = target;
 		this.targetTermCounts = terms;
 		this.targetDocumentCount = docs;
+	}
+	
+	public void setFilter(boolean filter) {
+		this.filter = filter;
 	}
 
 	public void shrink() throws IOException {
@@ -50,11 +56,13 @@ public class CorpusShrinker {
 	
 		for (Document doc : source) {
 			if (includeCurrentDocument()) {
-				RestrictedVocabularyDocument shrunk = new RestrictedVocabularyDocument(doc, topTerms);
-//              opportunity to chop more stop words or patterns
-//				FilteredDocument shrunk = new FilteredDocument(doc); 
-				if (!shrunk.isEmpty()) {
-					target.addDocument(shrunk);
+				if (filter) {
+					doc = new FilteredDocument(doc); 
+				}
+				doc = new RestrictedVocabularyDocument(doc, topTerms);
+				
+				if (!doc.isEmpty()) {
+					target.addDocument(doc);
 				}
 			}
 			
@@ -148,6 +156,7 @@ public class CorpusShrinker {
 		}
 		
 		CorpusShrinker app = new CorpusShrinker(source, target, docLimit, termLimits);
+		app.setFilter(true);
 		app.shrink();
 	}
 }
