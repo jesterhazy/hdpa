@@ -140,7 +140,7 @@ public class Hdpa {
 
 	private double gamma = 1.0d; // concentration parameter for top-level sticks
 	private double alpha = 1.0d; // concentration parameter for document-level sticks
-	double[] h; // base distribution for dirichlet phi
+	double eta; // hyperparameter for dirichlet base distribution
 
 	// parameter for q(phi), the per-topic word weights
 	double[][][] lambda;
@@ -165,13 +165,13 @@ public class Hdpa {
 		this.M = corpus.getModeCount(); 
 //		this.M = 1; // use this to limit analysis to mode 0 (words)
 		this.W = new int[M];
+		this.eta = 0.01d; // Wang2011
 
 		for (int m = 0; m < M; m++) {
 			W[m] = corpus.getTermCount(m);
 		}
 		
 		initializeCorpusSticks();
-		initializeH();
 		initializeLambda();
 		updateElogX();
 	}
@@ -197,16 +197,6 @@ public class Hdpa {
 		}
 		
 		lambda = array;
-	}
-	
-	private void initializeH() {
-		double[] array = new double[M];
-		for (int m = 0; m < M; m++) {
-//			array[m] = 1.0d / W[m];
-			array[m] = 0.01d; // (Wang, 2011)
-		}
-		
-		this.h = array;
 	}
 	
 	public void processInBatches(int batchSize) {
@@ -292,7 +282,7 @@ public class Hdpa {
 				likelihood = calculateDocumentScore(document, varphi, zeta, elogX, elogsticksPi, elogsticksBeta, documentSticks);			
 				
 				if (likelihood < oldLikelihood) {
-					LOG.warn(String.format("likelihood decreasing. old value: %.10f, new value: %.10f", oldLikelihood, likelihood));					
+					LOG.info(String.format("likelihood decreasing. old value: %.10f, new value: %.10f", oldLikelihood, likelihood));					
 					break;
 				}
 				
@@ -312,7 +302,7 @@ public class Hdpa {
 				for (int k = 0; k < K; k++) {
 					for(Integer id : entry.getValue()) {
 						int w = id.intValue();
-						double gradient = h[m] + (ss.batchWeight() * ss.batchLambda[m][k][w]);
+						double gradient = eta + (ss.batchWeight() * ss.batchLambda[m][k][w]);
 						lambda[m][k][w] = ((1.0d - rho) * lambda[m][k][w]) + (rho * gradient);
 					}
 				}
@@ -635,10 +625,7 @@ public class Hdpa {
 					alpha = Double.parseDouble(parts[1]);
 					break;
 				case 11:
-					h = new double[M];
-					for (int m = 0; m < M; m++) {
-						h[m] = Double.parseDouble(parts[m + 1]);
-					}
+					eta = Double.parseDouble(parts[1]);
 					break;
 				case 12:
 					corpusSticks = new double[2][K - 1];
@@ -727,11 +714,9 @@ public class Hdpa {
 			pw.print("alpha,");
 			pw.println(alpha);
 			
-			pw.print("h");
-			for (int m = 0; m < M; m++) {				
-				pw.print(",");
-				pw.print(h[m]);
-			}
+			pw.print("eta");
+			pw.println(eta);
+			
 			pw.println();
 			
 			for (int i = 0; i < corpusSticks.length; i++) {

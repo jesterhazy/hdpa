@@ -6,11 +6,10 @@ import com.bronzespear.hdpa.corpus.Document;
 public class CorpusDocumentDumper {
 	
 	public static void main(String[] args) throws Exception {
-		CorpusReader corpusReader = new CorpusReader("data/nyt-full-2000x100");
+		CorpusReader corpusReader = new CorpusReader(args[0]);
 		corpusReader.open();
 		
 		for (Document document : corpusReader) {
-			System.out.println("hey1!!");
 			System.out.println("id: " + document.getId());
 			System.out.println("  words: " + document.getWords());
 			System.out.println("  pers: " + document.getPersons());

@@ -8,7 +8,7 @@ public class TrainHdpa {
 	
 	public static void main(String[] args) throws Exception {
 		File corpusFile = null;
-		int batchSize = 10000;
+		int batchSize = 1000;
 		int passes = 1;
 		
 		if (args.length >= 1) {
