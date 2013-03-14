@@ -37,7 +37,7 @@ public class HdpaTest {
 		hdpa.loadParameters(file);
 		// no exception == good
 		
-		assertNotNull(hdpa.h);
+		assertNotNull(hdpa.eta);
 		
 		assertEquals(1200, hdpa.lambda.length * hdpa.lambda[0].length);
 		assertEquals(hdpa.K - 1, hdpa.corpusSticks[0].length);
