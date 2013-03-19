@@ -146,7 +146,7 @@ public class Hdpa {
 	double[][][] lambda;
 
 	// dirichlet expectation of lambda
-	double[][][] elogX;
+	double[][][] elogPhi;
 
 	// corpusSticks (u, v) are parameters for q(beta'), the top-level sticks
 	double[][] corpusSticks;
@@ -173,7 +173,7 @@ public class Hdpa {
 		
 		initializeCorpusSticks();
 		initializeLambda();
-		updateElogX();
+		updateElogPhi();
 	}
 
 	private void initializeCorpusSticks() {
@@ -235,7 +235,7 @@ public class Hdpa {
 		
 		// compute gradients and update global parameters
 		updateLambda(rho, ss);
-		updateElogX();
+		updateElogPhi();
 		updateCorpusSticks(rho, ss);
 		t++;
 		
@@ -279,7 +279,7 @@ public class Hdpa {
 			// assess convergence			
 			if (MIN_ITERATIONS < iteration) {
 				double oldLikelihood = likelihood;
-				likelihood = calculateDocumentScore(document, varphi, zeta, elogX, elogsticksPi, elogsticksBeta, documentSticks);			
+				likelihood = calculateDocumentScore(document, varphi, zeta, elogPhi, elogsticksPi, elogsticksBeta, documentSticks);			
 				
 				if (likelihood < oldLikelihood) {
 					LOG.info(String.format("likelihood decreasing. old value: %.10f, new value: %.10f", oldLikelihood, likelihood));					
@@ -337,11 +337,11 @@ public class Hdpa {
 	}
 	
 	private double calculateDocumentScore(CorpusDocument doc,
-			double[][] varphi, double[][][] zeta, double[][][] elogX,
+			double[][] varphi, double[][][] zeta, double[][][] elogPhi,
 			double[] elogsticksPi, double[] elogsticksBeta,
 			double[][] documentSticks) {
 
-		double score = sum(calculateScoreX(doc, varphi, zeta, elogX),
+		double score = sum(calculateScoreX(doc, varphi, zeta, elogPhi),
 				calculateScoreZ(doc, zeta, elogsticksPi),
 				calculateScoreC(varphi, elogsticksBeta),
 				calculateScorePi(documentSticks));
@@ -352,7 +352,7 @@ public class Hdpa {
 		return score;
 	}
 	
-	private double calculateScoreX(CorpusDocument doc, double[][] varphi, double[][][] zeta, double[][][] elogX) {
+	private double calculateScoreX(CorpusDocument doc, double[][] varphi, double[][][] zeta, double[][][] elogPhi) {
 		double score = 0.0d;
 		
 		int[][] ids = doc.getTermIds();
@@ -366,7 +366,7 @@ public class Hdpa {
 						for (int n = 0; n < ids[m].length; n++) {
 							if (zeta[m][n][t] > 0.0d) {
 								int w = ids[m][n];						
-								inner += (zeta[m][n][t] * elogX[m][k][w] * counts[m][n]);
+								inner += (zeta[m][n][t] * elogPhi[m][k][w] * counts[m][n]);
 							}
 						}
 					}
@@ -460,7 +460,7 @@ public class Hdpa {
 		return elogsticks;
 	}
 	
-	private void updateElogX() {
+	private void updateElogPhi() {
 		double[][][] array = new double[M][K][];
 		for (int m = 0; m < M; m++) {
 			for (int k = 0; k < K; k++) {
@@ -468,7 +468,7 @@ public class Hdpa {
 			}
 		}
 		
-		elogX = array;
+		elogPhi = array;
 	}
 
 	private double rho() {
@@ -531,7 +531,7 @@ public class Hdpa {
 				for (int t = 0; t < T; t++) {
 					double[] tmp = new double[K];
 					for (int k = 0; k < K; k++) {
-						tmp[k] = varphi_d[t][k] * elogX[m][k][w];
+						tmp[k] = varphi_d[t][k] * elogPhi[m][k][w];
 					}
 					
 					zeta[m][n][t] = (sum(tmp) * count) + elogsticksPi[t];
@@ -562,7 +562,7 @@ public class Hdpa {
 				for (int m = 0; m < M; m++) {
 					for (int n = 0; n < ids[m].length; n++) {
 						int w = ids[m][n];
-						tmp[i] = zeta[m][n][t] * elogX[m][k][w] * counts[m][n];
+						tmp[i] = zeta[m][n][t] * elogPhi[m][k][w] * counts[m][n];
 						i++;
 					}
 				}
@@ -666,7 +666,7 @@ public class Hdpa {
 			}
 		}
 		
-		updateElogX();
+		updateElogPhi();
 		
 		LOG.info("done loading");
 	}

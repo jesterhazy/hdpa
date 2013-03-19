@@ -41,7 +41,7 @@ public class HdpaTest {
 		
 		assertEquals(1200, hdpa.lambda.length * hdpa.lambda[0].length);
 		assertEquals(hdpa.K - 1, hdpa.corpusSticks[0].length);
-		assertNotNull(hdpa.elogX);
+		assertNotNull(hdpa.elogPhi);
 		
 	}
 	
