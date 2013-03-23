@@ -23,6 +23,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.distribution.GammaDistribution;
+import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.util.FastMath;
 
 import com.bronzespear.hdpa.corpus.CorpusDocument;
@@ -31,30 +32,45 @@ import com.bronzespear.hdpa.corpus.CorpusReader;
 
 public class Hdpa {
 
-	public class SufficientStats {
+	public class BatchStats {
 		private int batchSize;
 		private double[][] batchBeta; // ss for beta parameters (u, v)
 		private double[][][] batchLambda; // ss for lambda parameters
+		private int iterations; // total iterations for this batch
 		
 		private Map<CorpusMode, Set<Integer>> uniqueTermIds = new HashMap<CorpusMode, Set<Integer>>();
 
-		public SufficientStats(int batchSize) {
+		public BatchStats(int batchSize) {
 			this.batchSize = batchSize;
 			batchLambda = createEmptyLambdaArray();
 		}
-
-		public void update(double[][] docVarphi, double[][][] docZeta, CorpusDocument doc) {
-			LOG.debug("updating suffstats");
+		
+		public void update(double[][] docVarphi, double[][][] docZeta, HdpaDocument doc) {
+			if (LOG.isTraceEnabled()) {
+				LOG.trace("updating suffstats");
+			}
+			
 			updateTermIds(doc);
 			updateBeta(docVarphi);
 			updatePhi(docVarphi, docZeta, doc);
 		}
 		
-		private void updateTermIds(CorpusDocument doc) {
+		public void update(HdpaDocument doc, DocumentStats dstats) {
+			if (LOG.isTraceEnabled()) {
+				LOG.trace("updating batch stats");
+			}
+			
+			iterations += dstats.iterations;
+			updateTermIds(doc);
+			updateBeta(dstats.varphi);
+			updatePhi(dstats.varphi, dstats.zeta, doc);
+		}
+		
+		private void updateTermIds(HdpaDocument doc) {
 			int[][] termIds = doc.getTermIds();
 			
 			for (int m = 0; m < termIds.length; m++) {
-				CorpusMode mode = doc.getMode(m);
+				CorpusMode mode = CorpusMode.values()[m];
 				
 				Set<Integer> idsSet = uniqueTermIds.get(mode);				
 				if (idsSet == null) {
@@ -68,7 +84,7 @@ public class Hdpa {
 			}
 		}
 
-		private void updatePhi(double[][] docVarphi, double[][][] docZeta, CorpusDocument doc) {
+		private void updatePhi(double[][] docVarphi, double[][][] docZeta, HdpaDocument doc) {
 			int[][] ids = doc.getTermIds();
 			int[][] counts = doc.getTermCounts();
 			double[] tmp = new double[T];
@@ -152,6 +168,15 @@ public class Hdpa {
 	double[][] corpusSticks;
 	private int totalIterations;
 	
+	// number of documents to hold out for evaluation
+	private int testDocumentCount;
+	private boolean testDocsInitialized;
+	private List<HdpaDocument> testDocsTrain;
+	private List<HdpaDocument> testDocsTest;
+	
+	// reporting-only fields
+	private int documentsProcessed; 
+	
 	public Hdpa(CorpusReader corpus) {
 		this.corpus = corpus;
 	}
@@ -177,21 +202,22 @@ public class Hdpa {
 	}
 
 	private void initializeCorpusSticks() {
-		corpusSticks = new double[][] { fill(1.0d, K - 1), range(K - 1, K - 1.0d, -1.0d) };
-//		corpusSticks = new double[][] { fill(1.0d, K - 1), fill(gamma, K - 1)}; // (Hoffman, 2012)
+		corpusSticks = new double[][] { fill(1.0d, K - 1), range(K - 1, K - 1.0d, -1.0d) }; // Wang2011
+//		corpusSticks = new double[][] { fill(1.0d, K - 1), fill(gamma, K - 1)}; // Hoffman2012
 	}
 	
 	private void initializeLambda() {
 		LOG.debug("initializing lambda");
-		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
+		GammaDistribution gammaDistribution = new GammaDistribution(1, 1);
 		double[][][] array = new double[M][K][];
-
+		
 		for (int m = 0; m < M; m++) {
 			for (int k = 0; k < K; k++) {
 				array[m][k] = new double[W[m]];
 
 				for (int w = 0; w < W[m]; w++) {
-					array[m][k][w] = gammaDistribution.sample();
+					// per. Hoffman2012
+					array[m][k][w] = gammaDistribution.sample() * (D * 100 / (K * W[m])) + eta;
 				}
 			}
 		}
@@ -199,35 +225,25 @@ public class Hdpa {
 		lambda = array;
 	}
 	
-	public void processInBatches(int batchSize) {
-		List<CorpusDocument> batch = new ArrayList<CorpusDocument>(batchSize);
-
-		for (CorpusDocument document : corpus) {
-			batch.add(document);
-
-			if (batchSize == batch.size()) {
-				processBatch(batch);
-				batch.clear();
-			}
-		}
-
-		if (!batch.isEmpty()) {
-			processBatch(batch);
-			batch.clear();
-		}
-	}
-	
-	private void processBatch(List<CorpusDocument> documents) {
+	private void processBatch(List<HdpaDocument> documents) {
 		long start = System.currentTimeMillis();
 		LOG.debug(String.format("starting batch of %d documents", documents.size()));
 		
 		double[] elogsticksBeta = expectationLogSticks(corpusSticks);
-		SufficientStats ss = new SufficientStats(documents.size());
+		BatchStats bstats = new BatchStats(documents.size());
 
-		for (CorpusDocument document : documents) {
-			processDocument(document, ss, elogsticksBeta);
+		for (HdpaDocument document : documents) {
+			processDocument(document, bstats, elogsticksBeta);
 		}
 		
+		updateCorpusParameters(bstats);
+		
+		float elapsed = (System.currentTimeMillis() - start) / 1000.0f;
+		LOG.info(String.format("batch time: %8.3fs (%5.3fs/doc): ", elapsed , elapsed / documents.size()));
+		LOG.info(String.format("average iterations / document: %.10f", (float) bstats.iterations / documents.size()));
+	}
+
+	private void updateCorpusParameters(BatchStats ss) {
 		LOG.debug("updating corpus parameters");
 		
 		// set learning rate
@@ -238,22 +254,28 @@ public class Hdpa {
 		updateElogPhi();
 		updateCorpusSticks(rho, ss);
 		t++;
-		
-		float elapsed = (System.currentTimeMillis() - start) / 1000.0f;
-		LOG.info(String.format("batch time: %8.3fs (%5.3fs/doc): ", elapsed , elapsed / documents.size()));
 	}
 	
-	private void processDocument(CorpusDocument document, SufficientStats ss,
+	private void processDocument(HdpaDocument doc, BatchStats ss,
 			double[] elogsticksBeta) {
-		DocumentStats ds = inferDocumentParameters(document, elogsticksBeta);
-		totalIterations += ds.iterations;
-		ss.update(ds.varphi, ds.zeta, document);
+		
+		DocumentStats dstats = inferDocumentParameters(doc, elogsticksBeta);
+		totalIterations += dstats.iterations;
+		documentsProcessed++;
+		ss.update(doc, dstats);
+		ss.update(dstats.varphi, dstats.zeta, doc);
 	}
 	
-	private DocumentStats inferDocumentParameters(CorpusDocument document,
+	private DocumentStats inferDocumentParameters(HdpaDocument document,
 			double[] elogsticksBeta) {
 
-		LOG.debug("processing document: " + document.getId());
+		if (LOG.isTraceEnabled()) {
+			LOG.trace("processing document: " + document.getId());
+		}
+		
+		else if (document.getId() % 100 == 0) {
+			LOG.debug("processing document: " + document.getId());
+		}
 		
 		// zeta will be updated prior to first use
 		double[][][] zeta = null;
@@ -282,7 +304,9 @@ public class Hdpa {
 				likelihood = calculateDocumentScore(document, varphi, zeta, elogPhi, elogsticksPi, elogsticksBeta, documentSticks);			
 				
 				if (likelihood < oldLikelihood) {
-					LOG.info(String.format("likelihood decreasing. old value: %.10f, new value: %.10f", oldLikelihood, likelihood));					
+					if (LOG.isTraceEnabled()) {
+						LOG.trace(String.format("likelihood decreasing. old value: %.10f, new value: %.10f", oldLikelihood, likelihood));
+					}
 					break;
 				}
 				
@@ -290,12 +314,14 @@ public class Hdpa {
 			}
 		}
 
-		LOG.debug(String.format("%s after %d iterations", converged ? "converged" : "stopped", iteration));
+		if (LOG.isTraceEnabled()) {
+			LOG.trace(String.format("%s after %d iterations", converged ? "converged" : "stopped", iteration));
+		}
 		
 		return new DocumentStats(iteration, varphi, zeta);
 	}
 	
-	private void updateLambda(double rho, SufficientStats ss) {
+	private void updateLambda(double rho, BatchStats ss) {
 		for (Entry<CorpusMode, Set<Integer>> entry : ss.uniqueTermIds.entrySet()) {
 			int m = entry.getKey().ordinal();
 			if (m < M) {
@@ -310,7 +336,7 @@ public class Hdpa {
 		}
 	}
 	
-	private void updateCorpusSticks(double rho, SufficientStats ss) {
+	private void updateCorpusSticks(double rho, BatchStats ss) {
 		for (int k = 0; k < K - 1; k++) {
 			double[] uComponents = new double[T];
 			double[] vComponents = new double[T];
@@ -336,7 +362,7 @@ public class Hdpa {
 		return FastMath.abs(ratio) < CONVERGENCE_THRESHOLD;
 	}
 	
-	private double calculateDocumentScore(CorpusDocument doc,
+	private double calculateDocumentScore(HdpaDocument doc,
 			double[][] varphi, double[][][] zeta, double[][][] elogPhi,
 			double[] elogsticksPi, double[] elogsticksBeta,
 			double[][] documentSticks) {
@@ -352,7 +378,7 @@ public class Hdpa {
 		return score;
 	}
 	
-	private double calculateScoreX(CorpusDocument doc, double[][] varphi, double[][][] zeta, double[][][] elogPhi) {
+	private double calculateScoreX(HdpaDocument doc, double[][] varphi, double[][][] zeta, double[][][] elogPhi) {
 		double score = 0.0d;
 		
 		int[][] ids = doc.getTermIds();
@@ -379,7 +405,7 @@ public class Hdpa {
 		return score;
 	}
 
-	private double calculateScoreZ(CorpusDocument doc, double[][][] zeta, double[] elogsticksPi) {
+	private double calculateScoreZ(HdpaDocument doc, double[][][] zeta, double[] elogsticksPi) {
 		double score = 0.0d;
 		
 		int[][] ids = doc.getTermIds();
@@ -429,7 +455,7 @@ public class Hdpa {
 	
 	private void stop() throws IOException {
 		LOG.info("stopping analysis");
-		LOG.info(String.format("average iterations / document: %.10f", (float) totalIterations / D));
+		LOG.info(String.format("average iterations / document: %.10f", (float) totalIterations / documentsProcessed));
 		corpus.close();
 	}
 
@@ -513,7 +539,7 @@ public class Hdpa {
 		return size;
 	}
 	
-	private double[][][] updateZeta(CorpusDocument doc, double[] elogsticksPi,
+	private double[][][] updateZeta(HdpaDocument doc, double[] elogsticksPi,
 			double[][] varphi_d) {
 		double[][][] zeta = new double[M][][];
 		
@@ -544,7 +570,7 @@ public class Hdpa {
 		return zeta;
 	}
 	
-	private double[][] updateVarphi(CorpusDocument doc, double[] elogsticksBeta,
+	private double[][] updateVarphi(HdpaDocument doc, double[] elogsticksBeta,
 			double[][][] zeta) {
 		double[][] varphi = new double[T][K];
 		
@@ -671,8 +697,22 @@ public class Hdpa {
 		LOG.info("done loading");
 	}
 	
-	public void saveParameters(File file) throws IOException {
-		LOG.info("save model parameters to: " + file.getAbsolutePath());
+	private void saveFinalParameters() throws IOException {
+		String filename = String.format("%s-model-final.csv", corpus.getBasedir().getName());
+		saveParameters(filename);
+	}
+	
+	private void saveHourlyParameters(int hours) throws IOException {
+		saveParameters(String.format("%s-model-h%d.csv", corpus.getBasedir().getName(), hours));
+	}
+	
+	private void saveParameters(String filename) throws IOException {
+		File file = new File(corpus.getBasedir().getParentFile(), filename);
+		saveParameters(file);
+	}
+	
+	void saveParameters(File file) throws IOException {
+		LOG.info("saving model parameters to: " + file.getAbsolutePath());
 		PrintWriter pw = null;
 		
 		try {
@@ -839,13 +879,13 @@ public class Hdpa {
 		PrintWriter out = new PrintWriter(output, "UTF-8");
 		
 		for (CorpusDocument document : corpus) {
-			assignTopics(document, elogsticksBeta, out);
+			assignTopics(new HdpaDocument(document), elogsticksBeta, out);
 		}
 		
 		out.close();
 	}
 	
-	private void assignTopics(CorpusDocument document, double[] elogsticksBeta, PrintWriter out) {
+	private void assignTopics(HdpaDocument document, double[] elogsticksBeta, PrintWriter out) {
 		
 		DocumentStats ds = inferDocumentParameters(document, elogsticksBeta);
 		
@@ -870,20 +910,211 @@ public class Hdpa {
 		return weights;
 	}
 
-	public void processMultiplePasses(int passCount, int batchSize) throws IOException {
-		start();		
-		D *= passCount;
+	public void processOnce(int batchSize) throws IOException {
+		processUntilTime(0, batchSize);
+	}
+	
+	public void processUntilTime(long endTime, int batchSize) throws IOException {
+		start();
 		
-		for (int i = 0; i < passCount; i++) {
+		long startTime = System.currentTimeMillis();
+		int hours = 0;
+		
+		List<HdpaDocument> batch = new ArrayList<HdpaDocument>(batchSize);
+		while(!isTimeExpired(endTime)) {
 			
-			processInBatches(batchSize);
-			File modelFile = new File(corpus.getBasedir().getParentFile(), String.format("%s-model-p%d.csv", corpus.getBasedir().getName(), i));
-			saveParameters(modelFile);
+			for (CorpusDocument document : corpus) {
+				HdpaDocument doc = new HdpaDocument(document);
+				if (testDocumentCount > doc.getId()) {
+					skipTestDocument(doc);
+					continue;
+				}
+				
+				batch.add(doc);
+
+				if (batchSize == batch.size()) {
+					processBatch(batch);
+					batch.clear();
+				}
+				
+				if (isTimeExpired(endTime)) {
+					break;
+				}
+				
+				else {
+					int currentHours = hoursSince(startTime);
+					if (currentHours > hours) {
+						hours = currentHours;
+						saveHourlyParameters(hours);
+						evaluateModel();
+					}
+				}
+			}
 			
-			corpus.reopen();
+			if  (hasTimeLimit(endTime)) {
+				if (!isTimeExpired(endTime)) {
+					corpus.reopen(); // will need to skip test docs again.
+				}
+			}
+			
+			// if we aren't working towards a time limit, complete any leftover docs and exit.
+			else {
+				if (!batch.isEmpty()) {
+					processBatch(batch);
+					batch.clear();
+				}			
+				break;
+			}
 		}
 		
-		corpus.close();
+		saveFinalParameters();	
 		stop();
+	}
+
+	private void skipTestDocument(HdpaDocument doc) {
+		if (!testDocsInitialized) {
+			addTestDocument(doc);
+		}
+	}
+
+	private void addTestDocument(HdpaDocument doc) {
+		if (testDocsTrain == null) {
+			LOG.info("setting up test data");
+			testDocsTrain = new ArrayList<HdpaDocument>();
+			testDocsTest = new ArrayList<HdpaDocument>();
+		}
+		
+		Integer id = doc.getId();
+		int[][] termIds = doc.getTermIds();
+		int[][] termCounts = doc.getTermCounts();
+		int modes = termIds.length;
+		
+		HdpaDocument train = new HdpaDocument(id, modes);
+		HdpaDocument test = new HdpaDocument(id, modes);
+		
+		for (int m = 0; m < modes; m++) {
+			int docTerms = termIds[m].length;
+			int testTerms = docTerms / 10;
+			
+			test.getTermIds()[m] = new int[testTerms];
+			test.getTermCounts()[m] = new int[testTerms];
+			
+			if (testTerms == 0) {
+				train.getTermIds()[m] = termIds[m];
+				train.getTermCounts()[m] = termCounts[m];
+			}
+			
+			else {
+				train.getTermIds()[m] = new int[docTerms - testTerms];
+				train.getTermCounts()[m] = new int[docTerms - testTerms];
+
+				// select test term ids...
+				int[] ids = new RandomDataGenerator().nextPermutation(docTerms, testTerms);
+				Arrays.sort(ids);
+
+				// and distribute to the new documents
+				int j = 0;
+				int k = 0;
+				for (int i = 0; i < docTerms; i++) {
+					if (ArrayUtils.arrayContains(ids, i)) {
+						test.getTermIds()[m][j] = termIds[m][i];
+						test.getTermCounts()[m][j] = termCounts[m][i];
+						j++;
+					}
+					
+					else {
+						train.getTermIds()[m][k] = termIds[m][i];
+						train.getTermCounts()[m][k] = termCounts[m][i];
+						k++;
+					}
+				}
+			}
+		}
+		
+		testDocsTrain.add(train);
+		testDocsTest.add(test);
+		
+		if (testDocumentCount == testDocsTrain.size()) {
+			testDocsInitialized = true;
+			LOG.info(String.format("set aside %d test documents", testDocumentCount));
+		}
+	}
+
+	private boolean hasTimeLimit(long endTime) {
+		return endTime != 0;
+	}
+	
+	private int hoursSince(long startTime) {
+		long elapsed = System.currentTimeMillis() - startTime;
+//		long hours = elapsed / (1000 * 60 * 60);
+		long hours = elapsed / (1000 * 60); // minutes
+		return (int) hours;
+	}
+
+	private boolean isTimeExpired(long endTime) {
+		return hasTimeLimit(endTime) && endTime < System.currentTimeMillis();
+	}
+	
+	private void evaluateModel() {
+		if (testDocumentCount > 0) {
+			LOG.info("evaluating model");
+			
+			double[] elogsticksBeta = expectationLogSticks(corpusSticks);
+			
+			int totalWords = 0;
+			double totalLogLikelihood = 0.0d;
+			
+			for (int i = 0; i < testDocsTrain.size(); i++) {
+				HdpaDocument train = testDocsTrain.get(i);
+				HdpaDocument test = testDocsTest.get(i);
+				
+				DocumentStats ss = inferDocumentParameters(train, elogsticksBeta);
+								
+				totalLogLikelihood += logPredictive(test, ss);
+				totalWords += test.getTotalTermCount();
+			}
+			
+			double perword = totalLogLikelihood / totalWords;
+			
+			LOG.info("finished model evaluation");
+			LOG.info("per-word log likelihood: " + perword);
+		}
+	}
+	
+	private double logPredictive(HdpaDocument doc, DocumentStats ss) {
+		double score = 0.0d;
+		
+		double[][] varphi = ss.varphi;
+		double[][][] zeta = ss.zeta;
+		
+		int[][] ids = doc.getTermIds();
+		int[][] counts = doc.getTermCounts();
+		
+		for (int t = 0; t < T; t++) {
+			for (int k = 0; k < K; k++) {
+				if (varphi[t][k] > 0.0d) {
+					double inner = 0.0d;
+					for (int m = 0; m < M; m++) {
+						for (int n = 0; n < ids[m].length; n++) {
+							if (zeta[m][n][t] > 0.0d) {
+								int w = ids[m][n];						
+								inner += (zeta[m][n][t] * elogPhi[m][k][w] * counts[m][n]);
+							}
+						}
+					}
+					
+					score += (varphi[t][k] * inner);
+				}
+			}
+		}
+		
+		if (LOG.isTraceEnabled()) {
+			LOG.trace(String.format("logPredictive for doc %d: %f", doc.getId(), score));
+		}
+		return score;
+	}
+
+	public void setTestDocumentCount(int testDocumentCount) {
+		this.testDocumentCount = testDocumentCount;
 	}
 }
