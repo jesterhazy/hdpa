@@ -69,4 +69,8 @@ public class ArrayUtils {
 		
 		return sortedInts;
 	}
+
+	public static boolean arrayContains(int[] array, int key) {
+		return Arrays.binarySearch(array, key) >= 0;
+	}
 }

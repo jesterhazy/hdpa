@@ -107,14 +107,6 @@ public class CorpusDocument implements Document, Serializable {
 		termCounts[m] = counts;
 	}
 	
-	public CorpusMode[] getModes() {
-		return CorpusMode.values();
-	}
-	
-	public CorpusMode getMode(int m) {
-		return getModes()[m];
-	}
-	
 	public int[][] getTermIds() {
 		return termIds;
 	}
