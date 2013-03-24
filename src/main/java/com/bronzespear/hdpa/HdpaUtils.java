@@ -18,10 +18,14 @@ public class HdpaUtils {
 	}
 
 	public static String formatDuration(long duration) {
-		return new StringBuilder()
-				.append(TimeUnit.MILLISECONDS.toHours(duration)).append(":")
-				.append(TimeUnit.MILLISECONDS.toMinutes(duration) % 60).append(":")
-				.append(TimeUnit.MILLISECONDS.toSeconds(duration) % 60).append(".")
-				.append(duration % 1000).toString();
+		
+		long[] parts = {
+			TimeUnit.MILLISECONDS.toHours(duration),
+			TimeUnit.MILLISECONDS.toMinutes(duration) % 60,
+			TimeUnit.MILLISECONDS.toSeconds(duration) % 60,
+			duration % 1000,			
+		};
+		
+		return String.format("%3d:%2d:%2d.%3d", parts);
 	}
 }
