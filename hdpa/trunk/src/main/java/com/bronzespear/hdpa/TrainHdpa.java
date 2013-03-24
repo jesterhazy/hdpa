@@ -39,7 +39,7 @@ public class TrainHdpa {
 		}
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);		
-		MathUtils.accurate();
+		MathUtils.fast();
 		Hdpa h = new Hdpa(corpus);
 		
 		if (testDocumentCount > 0) {
@@ -47,8 +47,7 @@ public class TrainHdpa {
 		}
 
 		if (hourLimit > 0) {
-//			long endTime = System.currentTimeMillis() + (1000 * 60 * 60 * hourLimit);
-			long endTime = System.currentTimeMillis() + (1000 * 60 * hourLimit); // minute limit for now
+			long endTime = System.currentTimeMillis() + (1000 * 60 * 60 * hourLimit);
 			h.processUntilTime(endTime, batchSize);
 		}
 		

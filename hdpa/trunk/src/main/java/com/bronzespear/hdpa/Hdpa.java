@@ -136,8 +136,9 @@ public class Hdpa {
 	private static final int MAX_ITERATIONS = 100;
 	private static final int MIN_ITERATIONS = 3;
 	private static final double MINIMUM_RHO = 0.0d;
-	
 	private static final double CONVERGENCE_THRESHOLD = 0.0001d;
+	
+	private RandomDataGenerator rand = new RandomDataGenerator();
 	
 	// data parameters
 	private CorpusReader corpus;
@@ -176,6 +177,10 @@ public class Hdpa {
 	
 	// reporting-only fields
 	private int documentsProcessed; 
+	private long startTime;
+	private long inferenceTime;
+	private long updateTime;
+	private long testTime;
 	
 	public Hdpa(CorpusReader corpus) {
 		this.corpus = corpus;
@@ -236,14 +241,25 @@ public class Hdpa {
 			processDocument(document, bstats, elogsticksBeta);
 		}
 		
+		inferenceTime += System.currentTimeMillis() - start;
+		
 		updateCorpusParameters(bstats);
 		
 		float elapsed = (System.currentTimeMillis() - start) / 1000.0f;
 		LOG.info(String.format("batch time: %8.3fs (%5.3fs/doc): ", elapsed , elapsed / documents.size()));
 		LOG.info(String.format("average iterations / document: %.10f", (float) bstats.iterations / documents.size()));
+		logElapsedTimes();
+	}
+
+	private void logElapsedTimes() {
+		LOG.info(String.format("total time:      " + HdpaUtils.formatDuration(System.currentTimeMillis() - startTime)));
+		LOG.info(String.format("inference time:  " + HdpaUtils.formatDuration(inferenceTime)));
+		LOG.info(String.format("update time:     " + HdpaUtils.formatDuration(updateTime)));
+		LOG.info(String.format("evaluation time: " + HdpaUtils.formatDuration(testTime)));
 	}
 
 	private void updateCorpusParameters(BatchStats ss) {
+		long start = System.currentTimeMillis();
 		LOG.debug("updating corpus parameters");
 		
 		// set learning rate
@@ -254,6 +270,8 @@ public class Hdpa {
 		updateElogPhi();
 		updateCorpusSticks(rho, ss);
 		t++;
+		
+		updateTime += System.currentTimeMillis() - start;
 	}
 	
 	private void processDocument(HdpaDocument doc, BatchStats ss,
@@ -754,10 +772,8 @@ public class Hdpa {
 			pw.print("alpha,");
 			pw.println(alpha);
 			
-			pw.print("eta");
+			pw.print("eta,");
 			pw.println(eta);
-			
-			pw.println();
 			
 			for (int i = 0; i < corpusSticks.length; i++) {
 				pw.print("corpusSticks[" + i + "]");
@@ -915,10 +931,10 @@ public class Hdpa {
 	}
 	
 	public void processUntilTime(long endTime, int batchSize) throws IOException {
-		start();
-		
-		long startTime = System.currentTimeMillis();
+		startTime = System.currentTimeMillis();
 		int hours = 0;
+		
+		start();
 		
 		List<HdpaDocument> batch = new ArrayList<HdpaDocument>(batchSize);
 		while(!isTimeExpired(endTime)) {
@@ -984,6 +1000,17 @@ public class Hdpa {
 			testDocsTest = new ArrayList<HdpaDocument>();
 		}
 		
+		HdpaDocument[] split = splitTestDocument(doc);
+		testDocsTrain.add(split[0]);
+		testDocsTest.add(split[1]);
+		
+		if (testDocumentCount == testDocsTrain.size()) {
+			testDocsInitialized = true;
+			LOG.info(String.format("set aside %d test documents", testDocumentCount));
+		}
+	}
+	
+	private HdpaDocument[] splitTestDocument(HdpaDocument doc) {
 		Integer id = doc.getId();
 		int[][] termIds = doc.getTermIds();
 		int[][] termCounts = doc.getTermCounts();
@@ -994,7 +1021,7 @@ public class Hdpa {
 		
 		for (int m = 0; m < modes; m++) {
 			int docTerms = termIds[m].length;
-			int testTerms = docTerms / 10;
+			int testTerms = docTerms / 10; // 90:10 split per. Wang2011
 			
 			test.getTermIds()[m] = new int[testTerms];
 			test.getTermCounts()[m] = new int[testTerms];
@@ -1008,8 +1035,7 @@ public class Hdpa {
 				train.getTermIds()[m] = new int[docTerms - testTerms];
 				train.getTermCounts()[m] = new int[docTerms - testTerms];
 
-				// select test term ids...
-				int[] ids = new RandomDataGenerator().nextPermutation(docTerms, testTerms);
+				int[] ids = rand.nextPermutation(docTerms, testTerms);
 				Arrays.sort(ids);
 
 				// and distribute to the new documents
@@ -1031,13 +1057,7 @@ public class Hdpa {
 			}
 		}
 		
-		testDocsTrain.add(train);
-		testDocsTest.add(test);
-		
-		if (testDocumentCount == testDocsTrain.size()) {
-			testDocsInitialized = true;
-			LOG.info(String.format("set aside %d test documents", testDocumentCount));
-		}
+		return new HdpaDocument[] {train, test};
 	}
 
 	private boolean hasTimeLimit(long endTime) {
@@ -1046,8 +1066,7 @@ public class Hdpa {
 	
 	private int hoursSince(long startTime) {
 		long elapsed = System.currentTimeMillis() - startTime;
-//		long hours = elapsed / (1000 * 60 * 60);
-		long hours = elapsed / (1000 * 60); // minutes
+		long hours = elapsed / (1000 * 60 * 60); 
 		return (int) hours;
 	}
 
@@ -1057,6 +1076,7 @@ public class Hdpa {
 	
 	private void evaluateModel() {
 		if (testDocumentCount > 0) {
+			long start = System.currentTimeMillis();
 			LOG.info("evaluating model");
 			
 			double[] elogsticksBeta = expectationLogSticks(corpusSticks);
@@ -1078,42 +1098,20 @@ public class Hdpa {
 			
 			LOG.info("finished model evaluation");
 			LOG.info("per-word log likelihood: " + perword);
+			testTime += System.currentTimeMillis() - start;
 		}
 	}
 	
 	private double logPredictive(HdpaDocument doc, DocumentStats ss) {
-		double score = 0.0d;
-		
-		double[][] varphi = ss.varphi;
-		double[][][] zeta = ss.zeta;
-		
-		int[][] ids = doc.getTermIds();
-		int[][] counts = doc.getTermCounts();
-		
-		for (int t = 0; t < T; t++) {
-			for (int k = 0; k < K; k++) {
-				if (varphi[t][k] > 0.0d) {
-					double inner = 0.0d;
-					for (int m = 0; m < M; m++) {
-						for (int n = 0; n < ids[m].length; n++) {
-							if (zeta[m][n][t] > 0.0d) {
-								int w = ids[m][n];						
-								inner += (zeta[m][n][t] * elogPhi[m][k][w] * counts[m][n]);
-							}
-						}
-					}
-					
-					score += (varphi[t][k] * inner);
-				}
-			}
-		}
+		double score = calculateScoreX(doc, ss.varphi, ss.zeta, elogPhi);
 		
 		if (LOG.isTraceEnabled()) {
 			LOG.trace(String.format("logPredictive for doc %d: %f", doc.getId(), score));
 		}
+		
 		return score;
 	}
-
+	
 	public void setTestDocumentCount(int testDocumentCount) {
 		this.testDocumentCount = testDocumentCount;
 	}
