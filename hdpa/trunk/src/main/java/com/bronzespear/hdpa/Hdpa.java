@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -720,8 +721,8 @@ public class Hdpa {
 		saveParameters(filename);
 	}
 	
-	private void saveHourlyParameters(int hours) throws IOException {
-		saveParameters(String.format("%s-model-h%d.csv", corpus.getBasedir().getName(), hours));
+	private void saveHourlyParameters() throws IOException {
+		saveParameters(String.format("%s-model-%2$tF-%2$tH%2$tM.csv", corpus.getBasedir().getName(), new Date()));
 	}
 	
 	private void saveParameters(String filename) throws IOException {
@@ -961,7 +962,7 @@ public class Hdpa {
 					int currentHours = hoursSince(startTime);
 					if (currentHours > hours) {
 						hours = currentHours;
-						saveHourlyParameters(hours);
+						saveHourlyParameters();
 						evaluateModel();
 					}
 				}
