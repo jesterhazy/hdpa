@@ -24,10 +24,12 @@ public class HdpaTest {
 		when(corpus.getDocumentCount()).thenReturn(1000);
 		when(corpus.getModeCount()).thenReturn(4);
 		when(corpus.getTermCount(anyInt())).thenReturn(100);		
+
+		File file = new File("save.csv");
+		file.deleteOnExit();
 		
 		Hdpa hdpa = new Hdpa(corpus);
-		
-		File file = new File("save.csv");
+		hdpa.start();
 		hdpa.saveParameters(file);
 		
 		int lines = countLines(file);
@@ -42,7 +44,6 @@ public class HdpaTest {
 		assertEquals(1200, hdpa.lambda.length * hdpa.lambda[0].length);
 		assertEquals(hdpa.K - 1, hdpa.corpusSticks[0].length);
 		assertNotNull(hdpa.elogPhi);
-		
 	}
 	
 	private int countLines(File file) throws IOException {

@@ -2,8 +2,6 @@ package com.bronzespear.hdpa;
 
 import static com.bronzespear.hdpa.MathUtils.*;
 
-import java.util.Arrays;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -17,6 +15,23 @@ public class MathUtilsTest {
 		normalize(input);
 		double delta = 0.00001d;
 		Assert.assertArrayEquals(expected, input, delta);
+	}
+	
+	@Test
+	public void testNormalizeUnderflow() {
+		double[] input = new double[4901];
+		for (int i = 0; i < input.length; i++) {
+			input[i] = 1.0d;
+		}
+		
+		input[0] = 100.0d;
+		
+		normalize(input);
+
+		Assert.assertEquals(0.02d, input[0], MathUtils.EPSILON);
+		for (int i = 1; i < input.length; i++) {
+			Assert.assertTrue(approximateEquals(0.0002d, input[i]));
+		}
 	}
 	
 	@Test
@@ -134,25 +149,6 @@ public class MathUtilsTest {
 		
 		for (int i = 0; i < input.length; i++) {
 			Assert.assertTrue(i + " was " + input[i], input[i] >= 0.0d);
-		}
-		
-		System.out.println(Arrays.toString(input));
-	}
-	
-	@Test
-	public void testNormalizeUnderflow() {
-		double[] input = new double[5000];
-		for (int i = 0; i < input.length; i++) {
-			input[i] = 1.0d / 5000;
-		}
-		
-		input[0] = 200.0d;
-		
-		normalize(input);
-
-		Assert.assertEquals(0.04d, input[0], MathUtils.EPSILON);
-		for (int i = 1; i < input.length; i++) {
-			Assert.assertTrue(approximateEquals(0.0002d, input[i]));
 		}
 	}
 }
