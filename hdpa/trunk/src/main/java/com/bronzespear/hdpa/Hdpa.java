@@ -12,7 +12,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,7 +23,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.distribution.GammaDistribution;
-import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.util.FastMath;
 
 import com.bronzespear.hdpa.corpus.CorpusDocument;
@@ -139,8 +137,6 @@ public class Hdpa {
 	private static final double MINIMUM_RHO = 0.0d;
 	private static final double CONVERGENCE_THRESHOLD = 0.0001d;
 	
-	private RandomDataGenerator rand = new RandomDataGenerator();
-	
 	// data parameters
 	private CorpusReader corpus;
 	private int D; // total number of documents
@@ -187,7 +183,7 @@ public class Hdpa {
 		this.corpus = corpus;
 	}
 
-	private void start() throws IOException {
+	void start() throws IOException {
 		LOG.debug("initializing corpus parameters");
 		
 		corpus.open();
@@ -212,18 +208,36 @@ public class Hdpa {
 //		corpusSticks = new double[][] { fill(1.0d, K - 1), fill(gamma, K - 1)}; // Hoffman2012
 	}
 	
+//	private void initializeLambda() {
+//		LOG.debug("initializing lambda");
+//		GammaDistribution gammaDistribution = new GammaDistribution(1, 1);
+//		double[][][] array = new double[M][K][];
+//		
+//		for (int m = 0; m < M; m++) {
+//			for (int k = 0; k < K; k++) {
+//				array[m][k] = new double[W[m]];
+//
+//				for (int w = 0; w < W[m]; w++) {
+//					// per. Hoffman2012
+//					array[m][k][w] = gammaDistribution.sample() * (D * 100 / (K * W[m])) + eta;
+//				}
+//			}
+//		}
+//		
+//		lambda = array;
+//	}
+
 	private void initializeLambda() {
 		LOG.debug("initializing lambda");
-		GammaDistribution gammaDistribution = new GammaDistribution(1, 1);
+		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
 		double[][][] array = new double[M][K][];
-		
+
 		for (int m = 0; m < M; m++) {
 			for (int k = 0; k < K; k++) {
 				array[m][k] = new double[W[m]];
 
 				for (int w = 0; w < W[m]; w++) {
-					// per. Hoffman2012
-					array[m][k][w] = gammaDistribution.sample() * (D * 100 / (K * W[m])) + eta;
+					array[m][k][w] = gammaDistribution.sample();
 				}
 			}
 		}
@@ -509,7 +523,7 @@ public class Hdpa {
 		double[][][] array = new double[M][K][];
 		for (int m = 0; m < M; m++) {
 			for (int k = 0; k < K; k++) {
-				array[m][k] = dirichletExpectation(lambda[m][k]);
+				array[m][k] = expectLogDirichlet(lambda[m][k]);
 			}
 		}
 		
@@ -721,8 +735,8 @@ public class Hdpa {
 		saveParameters(filename);
 	}
 	
-	private void saveHourlyParameters() throws IOException {
-		saveParameters(String.format("%s-model-%2$tF-%2$tH%2$tM.csv", corpus.getBasedir().getName(), new Date()));
+	private void saveParameters() throws IOException {
+		saveParameters(String.format("%s-model-%s.csv", corpus.getBasedir().getName(), HdpaUtils.formattedTimestamp()));
 	}
 	
 	private void saveParameters(String filename) throws IOException {
@@ -962,7 +976,7 @@ public class Hdpa {
 					int currentHours = hoursSince(startTime);
 					if (currentHours > hours) {
 						hours = currentHours;
-						saveHourlyParameters();
+						saveParameters();
 						evaluateModel();
 					}
 				}
@@ -1001,7 +1015,7 @@ public class Hdpa {
 			testDocsTest = new ArrayList<HdpaDocument>();
 		}
 		
-		HdpaDocument[] split = splitTestDocument(doc);
+		HdpaDocument[] split = HdpaUtils.splitTestDocument2(doc);
 		testDocsTrain.add(split[0]);
 		testDocsTest.add(split[1]);
 		
@@ -1011,63 +1025,14 @@ public class Hdpa {
 		}
 	}
 	
-	private HdpaDocument[] splitTestDocument(HdpaDocument doc) {
-		Integer id = doc.getId();
-		int[][] termIds = doc.getTermIds();
-		int[][] termCounts = doc.getTermCounts();
-		int modes = termIds.length;
-		
-		HdpaDocument train = new HdpaDocument(id, modes);
-		HdpaDocument test = new HdpaDocument(id, modes);
-		
-		for (int m = 0; m < modes; m++) {
-			int docTerms = termIds[m].length;
-			int testTerms = docTerms / 10; // 90:10 split per. Wang2011
-			
-			test.getTermIds()[m] = new int[testTerms];
-			test.getTermCounts()[m] = new int[testTerms];
-			
-			if (testTerms == 0) {
-				train.getTermIds()[m] = termIds[m];
-				train.getTermCounts()[m] = termCounts[m];
-			}
-			
-			else {
-				train.getTermIds()[m] = new int[docTerms - testTerms];
-				train.getTermCounts()[m] = new int[docTerms - testTerms];
-
-				int[] ids = rand.nextPermutation(docTerms, testTerms);
-				Arrays.sort(ids);
-
-				// and distribute to the new documents
-				int j = 0;
-				int k = 0;
-				for (int i = 0; i < docTerms; i++) {
-					if (ArrayUtils.arrayContains(ids, i)) {
-						test.getTermIds()[m][j] = termIds[m][i];
-						test.getTermCounts()[m][j] = termCounts[m][i];
-						j++;
-					}
-					
-					else {
-						train.getTermIds()[m][k] = termIds[m][i];
-						train.getTermCounts()[m][k] = termCounts[m][i];
-						k++;
-					}
-				}
-			}
-		}
-		
-		return new HdpaDocument[] {train, test};
-	}
-
 	private boolean hasTimeLimit(long endTime) {
 		return endTime != 0;
 	}
 	
 	private int hoursSince(long startTime) {
 		long elapsed = System.currentTimeMillis() - startTime;
-		long hours = elapsed / (1000 * 60 * 60); 
+//		long hours = elapsed / (1000 * 60 * 60);
+		long hours = elapsed / (1000 * 60 * 15); // ?? mins
 		return (int) hours;
 	}
 
@@ -1075,7 +1040,7 @@ public class Hdpa {
 		return hasTimeLimit(endTime) && endTime < System.currentTimeMillis();
 	}
 	
-	private void evaluateModel() {
+	void evaluateModel() {
 		if (testDocumentCount > 0) {
 			long start = System.currentTimeMillis();
 			LOG.info("evaluating model");
@@ -1084,6 +1049,7 @@ public class Hdpa {
 			
 			int totalWords = 0;
 			double totalLogLikelihood = 0.0d;
+			double totalLogLikelihood2 = 0.0d;
 			
 			for (int i = 0; i < testDocsTrain.size(); i++) {
 				HdpaDocument train = testDocsTrain.get(i);
@@ -1091,23 +1057,50 @@ public class Hdpa {
 				
 				DocumentStats ss = inferDocumentParameters(train, elogsticksBeta);
 								
-				totalLogLikelihood += logPredictive(test, ss);
+				totalLogLikelihood += logPredictive1(test, ss);
+				totalLogLikelihood2 += logPredictive2(test, ss);
 				totalWords += test.getTotalTermCount();
 			}
 			
 			double perword = totalLogLikelihood / totalWords;
+			double perword2 = totalLogLikelihood2 / totalWords;
 			
 			LOG.info("finished model evaluation");
 			LOG.info("per-word log likelihood: " + perword);
+			LOG.info("per-word log likelihood: " + perword2);
 			testTime += System.currentTimeMillis() - start;
 		}
 	}
 	
-	private double logPredictive(HdpaDocument doc, DocumentStats ss) {
+	private double logPredictive1(HdpaDocument doc, DocumentStats ss) {
 		double score = calculateScoreX(doc, ss.varphi, ss.zeta, elogPhi);
 		
 		if (LOG.isTraceEnabled()) {
-			LOG.trace(String.format("logPredictive for doc %d: %f", doc.getId(), score));
+			LOG.trace(String.format("logPredictive for doc %d: %f", doc.getId(), score / doc.getTotalTermCount()));
+		}
+		
+		return score;
+	}
+	
+	private double logPredictive2(HdpaDocument doc, DocumentStats dstats) {
+		double score = 0.0d;
+		
+		double[] weights = summarizeVarphi(dstats.varphi);
+
+		int[][] ids = doc.getTermIds();
+		int[][] counts = doc.getTermCounts();
+		
+		for (int k = 0; k < K; k++) {			
+			for (int m = 0; m < M; m++) {
+				for (int n = 0; n < ids[m].length; n++) {
+					int w = ids[m][n];						
+					score += weights[k] * elogPhi[m][k][w] * counts[m][n];
+				}
+			}
+		}
+		
+		if (LOG.isTraceEnabled()) {
+			LOG.trace(String.format("logPredictive for doc %d: %f", doc.getId(), score / doc.getTotalTermCount()));
 		}
 		
 		return score;
@@ -1115,5 +1108,13 @@ public class Hdpa {
 	
 	public void setTestDocumentCount(int testDocumentCount) {
 		this.testDocumentCount = testDocumentCount;
+	}
+	
+	public void setTestData(List<HdpaDocument> train, List<HdpaDocument> test) {
+		testDocsInitialized = true;
+		testDocumentCount = train.size() + test.size();
+		
+		testDocsTrain = train;
+		testDocsTest = test;
 	}
 }

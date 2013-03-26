@@ -8,9 +8,9 @@ public class TrainHdpa {
 	
 	public static void main(String[] args) throws Exception {
 		File corpusFile = null;
-		int batchSize = 1000;
-		int testDocumentCount = 0;
 		int hourLimit = 0;
+		int testDocumentCount = 0;
+		int batchSize = 1000;
 
 		for (int i = 0; i < args.length; i++) {
 			switch (i) {
@@ -39,7 +39,6 @@ public class TrainHdpa {
 		}
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);		
-		MathUtils.fast();
 		Hdpa h = new Hdpa(corpus);
 		
 		if (testDocumentCount > 0) {

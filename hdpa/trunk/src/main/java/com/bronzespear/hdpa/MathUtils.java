@@ -11,12 +11,20 @@ public class MathUtils {
 	 * error (relative or absolute) for approximate double comparisons
 	 */
 	static final double EPSILON = 0.0000001d;
-//	private static final double LOG_NORMALIZER_MAX = 100.0d;
 
 	private MathUtils() { }
 
 	public static double sum(double... values) {
 		return impl.sum(values);
+	}
+	
+	public static int sum(int... values) {
+		int sum = 0;
+		for (int i : values) {
+			sum += i;
+		}
+		
+		return sum;
 	}
 	
 	public static double[] psi(double[] x) {
@@ -71,12 +79,23 @@ public class MathUtils {
 		return result;		
 	}
 	
-	public static double[] dirichletExpectation(double[] x) {
+	public static double[] expectLogDirichlet(double[] x) {
 		double psisum = psi(sum(x));
 
 		double[] expectation = new double[x.length];
 		for (int i = 0; i < x.length; i++) {
 			expectation[i] = psi(x[i]) - psisum;
+		}
+
+		return expectation;
+	}
+	
+	public static double[] expectDirichlet(double[] x) {
+		double sum = sum(x);
+
+		double[] expectation = new double[x.length];
+		for (int i = 0; i < x.length; i++) {
+			expectation[i] = x[i] / sum;
 		}
 
 		return expectation;
@@ -194,7 +213,7 @@ public class MathUtils {
 	
 	/* begin Impl interface and implementation classes */
 	
-	private static Impl impl = new Fast();
+	private static Impl impl = new Accurate();
 	
 	public static void fast() {
 		impl = new Fast();
