@@ -8,9 +8,10 @@ public class TrainHdpa {
 	
 	public static void main(String[] args) throws Exception {
 		File corpusFile = null;
-		int hourLimit = 0;
-		int testDocumentCount = 0;
+		int saveFrequency = 0;
+		int skipDocumentCount = 0;
 		int batchSize = 1000;
+		int hourLimit = 0;
 
 		for (int i = 0; i < args.length; i++) {
 			switch (i) {
@@ -18,13 +19,16 @@ public class TrainHdpa {
 				corpusFile = new File(args[i]);
 				break;
 			case 1:
-				hourLimit = Integer.parseInt(args[i]);
+				saveFrequency = Integer.parseInt(args[i]);
 				break;
 			case 2:
-				testDocumentCount = Integer.parseInt(args[i]);
+				skipDocumentCount = Integer.parseInt(args[i]);
 				break;
 			case 3:
 				batchSize = Integer.parseInt(args[i]);
+				break;
+			case 4:
+				hourLimit = Integer.parseInt(args[i]);
 				break;
 			default:
 			}
@@ -41,8 +45,12 @@ public class TrainHdpa {
 		CorpusReader corpus = new CorpusReader(corpusFile);		
 		Hdpa h = new Hdpa(corpus);
 		
-		if (testDocumentCount > 0) {
-			h.setTestDocumentCount(testDocumentCount);
+		if (saveFrequency > 0) {
+			h.setSaveFrequency(saveFrequency);
+		}
+		
+		if (skipDocumentCount > 0) {
+			h.setSkipDocumentsCount(skipDocumentCount);
 		}
 
 		if (hourLimit > 0) {

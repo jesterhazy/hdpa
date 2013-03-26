@@ -1,15 +1,20 @@
 package com.bronzespear.hdpa;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.random.RandomDataGenerator;
 
 public class HdpaUtils {
+	private static final Log LOG = LogFactory.getLog(HdpaUtils.class);
 	private static final RandomDataGenerator rand = new RandomDataGenerator();
 	
 	public static String repeatString(String s, int times) {
@@ -36,6 +41,33 @@ public class HdpaUtils {
 		};
 		
 		return String.format("%03d:%02d:%02d.%03d", parts[0], parts[1], parts[2], parts[3]);
+	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public static List<List<HdpaDocument>> splitTestDocuments(List<HdpaDocument> documents) {
+		List<HdpaDocument> train = new ArrayList<HdpaDocument>();
+		List<HdpaDocument> test = new ArrayList<HdpaDocument>();
+		
+		int i = 0;
+		for (HdpaDocument doc : documents) {
+			HdpaDocument[] split = splitTestDocument(doc);
+			
+			// if original document is very short, 
+			// test doc will have 0 length (and -Infinity log probability)
+			if (split[1].getTotalTermCount() > 0) {
+				train.add(split[0]);
+				test.add(split[1]);	
+			}
+			
+			else {
+				LOG.warn(String.format("skipping document %d. test split is empty.", i));
+			}
+			
+			i++;
+		}
+		
+		return Arrays.asList(train, test);
 	}
 	
 	public static HdpaDocument[] splitTestDocument(HdpaDocument doc) {
