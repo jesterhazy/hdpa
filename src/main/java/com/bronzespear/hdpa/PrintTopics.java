@@ -22,7 +22,9 @@ public class PrintTopics {
 		
 		String basename = modelFile.getName().replaceAll("-model.*$", "");
 		File corpusFile = new File(modelFile.getParentFile(), basename);
-		File topicsFile = new File(modelFile.getParentFile(), basename + "-topics.txt");
+		
+		String topicsFilename = String.format("%s-topics-%s.txt", basename, HdpaUtils.formattedTimestamp());
+		File topicsFile = new File(modelFile.getParentFile(), topicsFilename);
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);
 		corpus.open();
