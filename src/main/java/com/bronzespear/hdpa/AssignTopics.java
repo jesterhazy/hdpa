@@ -18,9 +18,8 @@ public class AssignTopics {
 			}
 		}
 		
-		String basename = modelFile.getName().replaceAll("-model.*$", "");
-		File corpusFile = new File(modelFile.getParentFile(), basename);
-		File topicsFile = new File(modelFile.getParentFile(), basename + "-doctopics.csv");
+		File corpusFile = HdpaUtils.getCorpusForModel(modelFile);
+		File topicsFile = new File(corpusFile.getParentFile(), corpusFile.getName() + "-doctopics.csv");
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);
 		corpus.open();

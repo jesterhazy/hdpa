@@ -10,7 +10,7 @@ public class TrainHdpa {
 		File corpusFile = null;
 		int saveFrequency = 0;
 		int skipDocumentCount = 0;
-		int batchSize = 1000;
+		int batchSize = 500;
 		int hourLimit = 0;
 
 		for (int i = 0; i < args.length; i++) {

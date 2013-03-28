@@ -1,8 +1,8 @@
 package com.bronzespear.hdpa;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.SortedMap;
@@ -197,7 +197,14 @@ public class HdpaUtils {
 		return new int[][] {ids, counts};
 	}
 
-	public static String formattedTimestamp() {
-		return String.format("%1$tY%1$tm%1$td-%1$tH%1$tM", new Date());
+	public static String formattedTimestamp(Long timestamp) {
+		return String.format("%1$tY%1$tm%1$td-%1$tH%1$tM", timestamp);
+	}
+
+	public static File getCorpusForModel(File modelFile) {
+		// this is based on the way TrainHdpa saves model files : <corpus>-model-<datetime>/<basename>.csv
+		String corpusName = modelFile.getParentFile().getName().replaceAll("-model.*$", "");
+		File corpusFile = new File(modelFile.getParentFile().getParentFile(), corpusName);
+		return corpusFile;
 	}
 }
