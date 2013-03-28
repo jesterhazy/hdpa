@@ -173,7 +173,7 @@ public class Hdpa {
 	private int saveFrequency;
 	
 	// reporting-only fields
-	private int documentsProcessed; 
+	private int documentsProcessed;
 	private long startTime;
 	private long inferenceTime;
 	private long updateTime;
@@ -710,16 +710,27 @@ public class Hdpa {
 	}
 	
 	private void saveFinalParameters() throws IOException {
-		String filename = String.format("%s-model-final.csv", corpus.getBasedir().getName());
+		String filename = String.format("%s-model-%s/final-%s.csv", corpus
+				.getBasedir().getName(), HdpaUtils
+				.formattedTimestamp(startTime), HdpaUtils
+				.formattedTimestamp(System.currentTimeMillis()));
 		saveParameters(filename);
 	}
-	
+
 	private void saveParameters() throws IOException {
-		saveParameters(String.format("%s-model-%s.csv", corpus.getBasedir().getName(), HdpaUtils.formattedTimestamp()));
+		saveParameters(String.format("%s-model-%s/b%05d-%s.csv", corpus
+				.getBasedir().getName(), HdpaUtils
+				.formattedTimestamp(startTime), t - 1, HdpaUtils
+				.formattedTimestamp(System.currentTimeMillis())));
 	}
 	
 	private void saveParameters(String filename) throws IOException {
 		File file = new File(corpus.getBasedir().getParentFile(), filename);
+		
+		if (!file.getParentFile().exists()) {
+			file.getParentFile().mkdirs();
+		}
+		
 		saveParameters(file);
 	}
 	
@@ -993,7 +1004,6 @@ public class Hdpa {
 			
 			int totalWords = 0;
 			double totalLogLikelihood = 0.0d;
-			double totalLogLikelihood2 = 0.0d; // temporary
 			
 			for (int i = 0; i < trainingDocuments.size(); i++) {
 				HdpaDocument train = trainingDocuments.get(i);
@@ -1002,45 +1012,16 @@ public class Hdpa {
 				DocumentStats dstats = inferDocumentParameters(train, elogsticksBeta);
 								
 				totalLogLikelihood += logPredictive1(test, dstats);
-				totalLogLikelihood2 += logPredictive2(test, dstats);
 				totalWords += test.getTotalTermCount();
 			}
 			
-			double perword = totalLogLikelihood / totalWords;
-			double perword2 = totalLogLikelihood2 / totalWords;
-			
 			LOG.info("finished model evaluation");
-			LOG.info("per-word log likelihood: " + perword);
-			LOG.info("per-word log likelihood: " + perword2);
+			LOG.info("per-word log likelihood: " + (totalLogLikelihood / totalWords));
 			LOG.info(String.format("evaluation time: %s", HdpaUtils.formatDuration(System.currentTimeMillis() - start)));
 	}
 	
 	private double logPredictive1(HdpaDocument doc, DocumentStats dstats) {
 		double score = calculateScoreX(doc, dstats.varphi, dstats.zeta, elogPhi);
-		
-		if (LOG.isTraceEnabled()) {
-			LOG.trace(String.format("logPredictive for doc %d: %f", doc.getId(), score / doc.getTotalTermCount()));
-		}
-		
-		return score;
-	}
-	
-	private double logPredictive2(HdpaDocument doc, DocumentStats dstats) {
-		double score = 0.0d;
-		
-		double[] weights = summarizeVarphi(dstats.varphi);
-
-		int[][] ids = doc.getTermIds();
-		int[][] counts = doc.getTermCounts();
-		
-		for (int k = 0; k < K; k++) {			
-			for (int m = 0; m < M; m++) {
-				for (int n = 0; n < ids[m].length; n++) {
-					int w = ids[m][n];						
-					score += weights[k] * elogPhi[m][k][w] * counts[m][n];
-				}
-			}
-		}
 		
 		if (LOG.isTraceEnabled()) {
 			LOG.trace(String.format("logPredictive for doc %d: %f", doc.getId(), score / doc.getTotalTermCount()));

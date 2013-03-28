@@ -10,7 +10,6 @@ public class PrintTopics {
 		
 		File modelFile = null;
 		
-		
 		if (args.length >= 1) {
 			modelFile = new File(args[0]);
 			
@@ -19,12 +18,9 @@ public class PrintTopics {
 			}
 		}
 		
-		
-		String basename = modelFile.getName().replaceAll("-model.*$", "");
-		File corpusFile = new File(modelFile.getParentFile(), basename);
-		
-		String topicsFilename = String.format("%s-topics-%s.txt", basename, HdpaUtils.formattedTimestamp());
-		File topicsFile = new File(modelFile.getParentFile(), topicsFilename);
+		File corpusFile = HdpaUtils.getCorpusForModel(modelFile);
+		String topicsFilename = String.format("%s-topics-%s.txt", corpusFile.getName(), HdpaUtils.formattedTimestamp(System.currentTimeMillis()));
+		File topicsFile = new File(corpusFile.getParentFile(), topicsFilename);
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);
 		corpus.open();

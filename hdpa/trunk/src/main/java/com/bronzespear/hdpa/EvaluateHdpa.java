@@ -25,7 +25,7 @@ public class EvaluateHdpa {
 					throw new IllegalArgumentException("file does not exist: " + args[i]);
 				}
 				
-				if (!file.getName().matches("^.*model.*\\.csv$")) {
+				if (!file.getName().matches("^.*\\.csv$")) {
 					throw new IllegalArgumentException("not a model file: " + args[i]);
 				}
 				
@@ -37,8 +37,7 @@ public class EvaluateHdpa {
 			throw new IllegalArgumentException("no model specified!");
 		}
 		
-		String basename = modelFiles.get(0).getName().replaceAll("-model.*$", "");
-		File corpusFile = new File(modelFiles.get(0).getParentFile(), basename);
+		File corpusFile = HdpaUtils.getCorpusForModel(modelFiles.get(0));
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);
 		corpus.open();
