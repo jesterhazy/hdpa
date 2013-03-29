@@ -10,6 +10,5 @@ cd $PBS_O_WORKDIR
 echo "Current working directory is `pwd`"
 
 echo "Starting run at: `date`"
-/home/jester/hdpa/run.sh com.bronzespear.hdpa.corpus.utils.CorpusShrinker /home/jester/data/nan-random 1000 5000
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.corpus.utils.CorpusShrinker /home/jester/data/nan-random 0 8000 2000 1000 1000
 echo "Program finished with exit code $? at: `date`"
-
