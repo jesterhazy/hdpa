@@ -19,8 +19,8 @@ public class PrintTopics {
 		}
 		
 		File corpusFile = HdpaUtils.getCorpusForModel(modelFile);
-		String topicsFilename = String.format("%s-topics-%s.txt", corpusFile.getName(), HdpaUtils.formattedTimestamp(System.currentTimeMillis()));
-		File topicsFile = new File(corpusFile.getParentFile(), topicsFilename);
+		String topicsFilename = String.format("topics-%s.txt", HdpaUtils.formattedTimestamp(System.currentTimeMillis()));
+		File topicsFile = new File(modelFile.getParentFile(), topicsFilename);
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);
 		corpus.open();

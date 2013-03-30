@@ -138,7 +138,7 @@ public class Hdpa {
 	private static final double CONVERGENCE_THRESHOLD = 0.0001d;
 	
 	// data parameters
-	private CorpusReader corpus;
+	CorpusReader corpus;
 	private int D; // total number of documents
 	private int M; // number of modes
 	private int[] W; // number of words per mode
@@ -152,8 +152,8 @@ public class Hdpa {
 	int K = 300; // top-level topic truncation
 	private int T = 20; // doc-level topic truncation
 
-	private double gamma = 1.0d; // concentration parameter for top-level sticks
-	private double alpha = 1.0d; // concentration parameter for document-level sticks
+	double gamma = 1.0d; // concentration parameter for top-level sticks
+	double alpha = 1.0d; // concentration parameter for document-level sticks
 	double eta; // hyperparameter for dirichlet base distribution
 
 	// parameter for q(phi), the per-topic word weights
@@ -666,18 +666,24 @@ public class Hdpa {
 					eta = Double.parseDouble(parts[1]);
 					break;
 				case 12:
-					corpusSticks = new double[2][K - 1];
-					// deliberate fall thru
+					inferenceTime = Long.parseLong(parts[1]);
+					break;
 				case 13:
-					for (int k = 0; k < K - 1; k++) {
-						corpusSticks[lineNumber - 12][k] = Double.parseDouble(parts[k + 1]);
-					}
+					documentsProcessed = Integer.parseInt(parts[1]);
 					break;
 				case 14:
+					corpusSticks = new double[2][K - 1];
+					// deliberate fall thru
+				case 15:
+					for (int k = 0; k < K - 1; k++) {
+						corpusSticks[lineNumber - 14][k] = Double.parseDouble(parts[k + 1]);
+					}
+					break;
+				case 16:
 					LOG.debug("loading lambda...");
 					// deliberate fall thru
 				default:					
-					if (lineNumber <= (M * K) + 14) {
+					if (lineNumber <= (M * K) + 16) {
 						
 						if (lambda == null) {
 							lambda = new double[M][K][];
@@ -710,18 +716,20 @@ public class Hdpa {
 	}
 	
 	private void saveFinalParameters() throws IOException {
-		String filename = String.format("%s-model-%s/final-%s.csv", corpus
-				.getBasedir().getName(), HdpaUtils
-				.formattedTimestamp(startTime), HdpaUtils
-				.formattedTimestamp(System.currentTimeMillis()));
-		saveParameters(filename);
+		saveParameters(String.format("%s-model-%s/final.csv", 
+				corpus.getBasedir().getName(), 
+				HdpaUtils.formattedTimestamp(startTime)));
 	}
 
 	private void saveParameters() throws IOException {
-		saveParameters(String.format("%s-model-%s/b%05d-%s.csv", corpus
-				.getBasedir().getName(), HdpaUtils
-				.formattedTimestamp(startTime), t - 1, HdpaUtils
-				.formattedTimestamp(System.currentTimeMillis())));
+		saveParameters(String.format("%s-model-%s/%05d.csv", 
+				corpus.getBasedir().getName(), 
+				HdpaUtils.formattedTimestamp(startTime), 
+				getBatchNumber()));
+	}
+
+	public int getBatchNumber() {
+		return t - 1;
 	}
 	
 	private void saveParameters(String filename) throws IOException {
@@ -779,6 +787,12 @@ public class Hdpa {
 			
 			pw.print("eta,");
 			pw.println(eta);
+			
+			pw.print("inferenceTime,");
+			pw.println(inferenceTime);
+			
+			pw.print("documentsProcessed,");
+			pw.println(documentsProcessed);
 			
 			for (int i = 0; i < corpusSticks.length; i++) {
 				pw.print("corpusSticks[" + i + "]");
@@ -985,7 +999,7 @@ public class Hdpa {
 	}
 	
 	private boolean saveRequired() {
-		return saveFrequency > 0 &&  (t - 1) % saveFrequency == 0;
+		return saveFrequency > 0 &&  getBatchNumber() % saveFrequency == 0;
 	}
 
 	private boolean hasTimeLimit(long endTime) {
@@ -1011,7 +1025,7 @@ public class Hdpa {
 				
 				DocumentStats dstats = inferDocumentParameters(train, elogsticksBeta);
 								
-				totalLogLikelihood += logPredictive1(test, dstats);
+				totalLogLikelihood += logPredictive(test, dstats);
 				totalWords += test.getTotalTermCount();
 			}
 			
@@ -1020,7 +1034,8 @@ public class Hdpa {
 			LOG.info(String.format("evaluation time: %s", HdpaUtils.formatDuration(System.currentTimeMillis() - start)));
 	}
 	
-	private double logPredictive1(HdpaDocument doc, DocumentStats dstats) {
+	
+	private double logPredictive(HdpaDocument doc, DocumentStats dstats) {
 		double score = calculateScoreX(doc, dstats.varphi, dstats.zeta, elogPhi);
 		
 		if (LOG.isTraceEnabled()) {
@@ -1044,5 +1059,13 @@ public class Hdpa {
 	 */
 	public void setSaveFrequency(int saveFrequency) {
 		this.saveFrequency = saveFrequency;
+	}
+	
+	public int getDocumentsProcessed() {
+		return documentsProcessed;
+	}
+	
+	public long getInferenceTime() {
+		return inferenceTime;
 	}
 }

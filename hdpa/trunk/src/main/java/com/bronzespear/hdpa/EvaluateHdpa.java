@@ -48,11 +48,13 @@ public class EvaluateHdpa {
 		List<HdpaDocument> train = splitDocuments.get(0);
 		List<HdpaDocument> test = splitDocuments.get(1);
 		
-		Hdpa h = new Hdpa(corpus);
-		for (File modelFile : modelFiles) {
-			h.loadParameters(modelFile);
-			h.evaluateModel(train, test);
+		LdaEvaluator eval = new LdaEvaluator();
+		for (File modelFile : modelFiles) {			
+			eval.setModelFile(modelFile);
+			eval.evaluate(train, test);
 		}
+		
+		eval.close();
 	}
 
 	private static List<HdpaDocument> collectTestDocuments(int testDocumentCount,

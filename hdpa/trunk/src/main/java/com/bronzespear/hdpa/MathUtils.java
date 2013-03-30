@@ -117,6 +117,10 @@ public class MathUtils {
 		return new ArrayRealVector(x).mapSubtractToSelf(y).toArray();
 	}
 	
+	public static double[] scalarMultiply(double[] x, double y) {
+		return new ArrayRealVector(x).mapMultiplyToSelf(y).toArray();
+	}
+	
 	public static double[][] scalarMultiply(double[][] x, double y) {
 		return MatrixUtils.createRealMatrix(x).scalarMultiply(y).getData();
 	}
@@ -131,6 +135,21 @@ public class MathUtils {
 		return new ArrayRealVector(x)
 				.subtract(new ArrayRealVector(y))
 				.toArray();
+	}
+	
+	public static double[] vectorMultiply(double[] x, double[] y) {
+		return new ArrayRealVector(x)
+				.ebeMultiply(new ArrayRealVector(y))
+				.toArray();
+	}
+	
+	public static double[] vectorDivide(int[] x, double[] y) {
+		double[] d = new double[x.length];
+		for (int i = 0; i < x.length; i++) {
+			d[i] = x[i];
+		}
+		
+		return vectorDivide(d, y);
 	}
 	
 	public static double[] vectorDivide(double[] x, double[] y) {
@@ -184,32 +203,6 @@ public class MathUtils {
 			values[i] /= sum;
 		}
 	}
-	
-//	public static void normalize(double[] values) {
-//		// compute exp(log(sum(exp(v[])))) per Wang
-//		int length = values.length;
-//	
-//		double max = max(values);
-//		double logShift = LOG_NORMALIZER_MAX - FastMath.log(length + 1.0d) - max;
-//		RealVector v = new ArrayRealVector(values).mapAddToSelf(logShift).mapToSelf(new Exp()); 
-//		double total = sum(v.toArray());
-//		double logNorm = FastMath.log(total) - logShift;
-//		
-//		double sum = 0.0d;
-//		for (int i = 0; i < length; i++) {			
-//			values[i] = FastMath.exp(values[i] - logNorm);
-//			sum += values[i];
-//		}
-//		
-//		if (!approximateEquals(sum, 1.0d)) {
-//			LOG.error(String.format("normalized array sums to %f", sum));
-//			throw new IllegalStateException();
-//		}
-//		
-//		if (LOG.isTraceEnabled()) {
-//			LOG.trace(String.format("max value: %f, logNorm: %f", max, logNorm));
-//		}
-//	}
 	
 	/* begin Impl interface and implementation classes */
 	
@@ -324,5 +317,19 @@ public class MathUtils {
 			
 			return result;
 		}
+	}
+
+	public static double[] abs(double[] x) {
+		double[] d = new double[x.length];
+		
+		for (int i = 0; i < x.length; i++) {
+			d[i] = FastMath.abs(x[i]);
+		}
+		
+		return d;
+	}
+
+	public static double mean(double[] x) {
+		return sum(x) / (double) x.length;
 	}
 }
