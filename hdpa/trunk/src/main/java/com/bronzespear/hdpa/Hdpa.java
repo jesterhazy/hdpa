@@ -177,6 +177,7 @@ public class Hdpa {
 	private long startTime;
 	private long inferenceTime;
 	private long updateTime;
+	private int batchSize;
 	
 	public Hdpa(CorpusReader corpus) {
 		this.corpus = corpus;
@@ -715,17 +716,22 @@ public class Hdpa {
 		LOG.info("done loading");
 	}
 	
+	private String getModelDir() {
+		return String.format("%s-model-b%d-k%3.1f-%s",
+				corpus.getBasedir().getName(),
+				batchSize,
+				kappa,
+				HdpaUtils.formattedTimestamp(startTime));
+	}
+	
 	private void saveFinalParameters() throws IOException {
-		saveParameters(String.format("%s-model-%s/final.csv", 
-				corpus.getBasedir().getName(), 
-				HdpaUtils.formattedTimestamp(startTime)));
+		String filename = getModelDir() + "/final.csv";
+		saveParameters(filename);
 	}
 
 	private void saveParameters() throws IOException {
-		saveParameters(String.format("%s-model-%s/%05d.csv", 
-				corpus.getBasedir().getName(), 
-				HdpaUtils.formattedTimestamp(startTime), 
-				getBatchNumber()));
+		String filename = String.format("%s/%05d.csv", getModelDir(), getBatchNumber());
+		saveParameters(filename);
 	}
 
 	public int getBatchNumber() {
@@ -945,11 +951,11 @@ public class Hdpa {
 		return weights;
 	}
 
-	public void processOnce(int batchSize) throws IOException {
-		processUntilTime(0, batchSize);
+	public void processOnce() throws IOException {
+		processUntilTime(0);
 	}
 	
-	public void processUntilTime(long endTime, int batchSize) throws IOException {
+	public void processUntilTime(long endTime) throws IOException {
 		startTime = System.currentTimeMillis();
 		start();
 		
@@ -999,7 +1005,20 @@ public class Hdpa {
 	}
 	
 	private boolean saveRequired() {
-		return saveFrequency > 0 &&  getBatchNumber() % saveFrequency == 0;
+		boolean save = false;
+		
+		int batchNumber = getBatchNumber();
+		
+		if (saveFrequency > 0) {
+			save = batchNumber % saveFrequency == 0;
+		}
+		
+		else {
+			// power of two?
+			save = (batchNumber & (batchNumber-1)) == 0;
+		}
+		
+		return save;
 	}
 
 	private boolean hasTimeLimit(long endTime) {
@@ -1067,5 +1086,13 @@ public class Hdpa {
 	
 	public long getInferenceTime() {
 		return inferenceTime;
+	}
+	
+	public void setBatchSize(int batchSize) {
+		this.batchSize = batchSize;
+	}
+
+	public void setKappa(double kappa) {
+		this.kappa = kappa;
 	}
 }
