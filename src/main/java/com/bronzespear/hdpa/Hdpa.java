@@ -1013,9 +1013,9 @@ public class Hdpa {
 			save = batchNumber % saveFrequency == 0;
 		}
 		
-		else {
+		else {				
 			// power of two?
-			save = (batchNumber & (batchNumber-1)) == 0;
+			save = (batchNumber & (batchNumber-1)) == 0 || batchNumber % 256 == 0;
 		}
 		
 		return save;
