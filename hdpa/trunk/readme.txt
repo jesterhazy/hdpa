@@ -28,35 +28,5 @@ and then run
 
     run.sh <main-class> <args>
 
-To train an HDPA model, use this command:
-
-    run.sh com.bronzespear.hdpa.TrainHdpa <corpus> <batch size>
-
-where
-
-    <corpus> is the path (full or relative>) to corpus data directory, and
-    <batch size> is an optional argument to change the size of training "mini-batches" (default = 1000)
-
-This program will train the model, and then save the model parameters to a file named:
-
-    <corpus path>/<corpus dir>-model.csv
-
-where <corpus dir> is name of the corpus data directory, and <corpus path> is its parent directory.   
-
-To create a formatted list of topics and terms, use this command:
-
-    run.sh com.bronzespear.hdpa.PrintTopics <corpus path>
-
-It will assume that a corresponding results file already exists. The formatted
-results will be saved to
-
-    <corpus path>/<corpus dir>-topics.txt
-
-To assign topic to documents using an already-trained model, use this command:
-
-	run.sh com.bronzespear.hdpa.AssignTopics <corpus path>
-
-It will assume that a corresponding results file already exists. The results (a table of
-document ids and associated topic weights) will be saved to
-
-    <corpus path>/<corpus dir>-doctopics.csv
+For detailed information on all the programs available, arguments, etc., 
+refer to the documentation in the appendices to thesis.pdf.
