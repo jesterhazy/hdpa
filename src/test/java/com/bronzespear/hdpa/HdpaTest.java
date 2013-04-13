@@ -33,7 +33,7 @@ public class HdpaTest {
 		hdpa.saveParameters(file);
 		
 		int lines = countLines(file);
-		assertEquals(1214, lines); // 14 lines + M * K lines for lambda 
+		assertEquals(1216, lines); // 16 lines + M * K lines for lambda 
 		
 		hdpa = new Hdpa(corpus);
 		hdpa.loadParameters(file);
