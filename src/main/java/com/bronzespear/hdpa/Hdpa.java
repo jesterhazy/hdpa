@@ -164,6 +164,10 @@ public class Hdpa {
 
 	// corpusSticks (u, v) are parameters for q(beta'), the top-level sticks
 	double[][] corpusSticks;
+	
+	// expectation of log corpusSticks
+	private double[] elogsticksBeta;
+	
 	private int totalIterations;
 	
 	// number of documents to skip (because they are used for testing)
@@ -199,6 +203,8 @@ public class Hdpa {
 		}
 		
 		initializeCorpusSticks();
+		updateElogBeta();
+		
 		initializeLambda();
 		updateElogPhi();
 	}
@@ -230,11 +236,10 @@ public class Hdpa {
 		long start = System.currentTimeMillis();
 		LOG.debug(String.format("starting batch of %d documents", documents.size()));
 		
-		double[] elogsticksBeta = expectationLogSticks(corpusSticks);
 		BatchStats bstats = new BatchStats(documents.size());
 
 		for (HdpaDocument document : documents) {
-			processDocument(document, bstats, elogsticksBeta);
+			processDocument(document, bstats);
 		}
 		
 		inferenceTime += System.currentTimeMillis() - start;
@@ -261,26 +266,26 @@ public class Hdpa {
 		double rho = rho();
 		
 		// compute gradients and update global parameters
+		updateCorpusSticks(rho, bstats);
+		updateElogBeta();
+		
 		updateLambda(rho, bstats);
 		updateElogPhi();
-		updateCorpusSticks(rho, bstats);
 		t++;
 		
 		updateTime += System.currentTimeMillis() - start;
 	}
 	
-	private void processDocument(HdpaDocument doc, BatchStats bstats,
-			double[] elogsticksBeta) {
+	private void processDocument(HdpaDocument doc, BatchStats bstats) {
 		
-		DocumentStats dstats = inferDocumentParameters(doc, elogsticksBeta);
+		DocumentStats dstats = inferDocumentParameters(doc);
 		totalIterations += dstats.iterations;
 		documentsProcessed++;
 		bstats.update(doc, dstats);
 		bstats.update(dstats.varphi, dstats.zeta, doc);
 	}
 	
-	private DocumentStats inferDocumentParameters(HdpaDocument document,
-			double[] elogsticksBeta) {
+	private DocumentStats inferDocumentParameters(HdpaDocument document) {
 
 		if (LOG.isTraceEnabled()) {
 			LOG.trace("processing document: " + document.getId());
@@ -305,7 +310,7 @@ public class Hdpa {
 		double likelihood = -Double.MAX_VALUE;
 		while (!converged && iteration < MAX_ITERATIONS) {
 			zeta = updateZeta(document, elogsticksPi, varphi);
-			varphi = updateVarphi(document, elogsticksBeta, zeta);
+			varphi = updateVarphi(document, zeta);
 			documentSticks = updateDocumentSticks(zeta);
 			elogsticksPi = expectationLogSticks(documentSticks);
 
@@ -314,7 +319,7 @@ public class Hdpa {
 			// assess convergence			
 			if (MIN_ITERATIONS < iteration) {
 				double oldLikelihood = likelihood;
-				likelihood = calculateDocumentScore(document, varphi, zeta, elogPhi, elogsticksPi, elogsticksBeta, documentSticks);			
+				likelihood = calculateDocumentScore(document, varphi, zeta, elogsticksPi, documentSticks);			
 				
 				if (likelihood < oldLikelihood) {
 					if (LOG.isTraceEnabled()) {
@@ -376,13 +381,12 @@ public class Hdpa {
 	}
 	
 	private double calculateDocumentScore(HdpaDocument doc,
-			double[][] varphi, double[][][] zeta, double[][][] elogPhi,
-			double[] elogsticksPi, double[] elogsticksBeta,
-			double[][] documentSticks) {
+			double[][] varphi, double[][][] zeta,
+			double[] elogsticksPi, double[][]documentSticks) {
 
 		double score = sum(calculateScoreX(doc, varphi, zeta, elogPhi),
 				calculateScoreZ(doc, zeta, elogsticksPi),
-				calculateScoreC(varphi, elogsticksBeta),
+				calculateScoreC(varphi),
 				calculateScorePi(documentSticks));
 		
 		if (LOG.isTraceEnabled()) {
@@ -437,7 +441,7 @@ public class Hdpa {
 		return score;
 	}
 	
-	private double calculateScoreC(double[][] varphi, double[] elogsticksBeta) {
+	private double calculateScoreC(double[][] varphi) {
 		double score = 0.0d;
 
 		for (int t = 0; t < T; t++) {
@@ -499,6 +503,10 @@ public class Hdpa {
 		return elogsticks;
 	}
 	
+	private void updateElogBeta() {
+		elogsticksBeta = expectationLogSticks(corpusSticks);
+	}
+
 	private void updateElogPhi() {
 		double[][][] array = new double[M][K][];
 		for (int m = 0; m < M; m++) {
@@ -583,8 +591,7 @@ public class Hdpa {
 		return zeta;
 	}
 	
-	private double[][] updateVarphi(HdpaDocument doc, double[] elogsticksBeta,
-			double[][][] zeta) {
+	private double[][] updateVarphi(HdpaDocument doc, double[][][] zeta) {
 		double[][] varphi = new double[T][K];
 		
 		int[][] ids = doc.getTermIds();
@@ -711,6 +718,7 @@ public class Hdpa {
 			}
 		}
 		
+		updateElogBeta();
 		updateElogPhi();
 		
 		LOG.info("done loading");
@@ -914,23 +922,28 @@ public class Hdpa {
 		out.println();
 	}
 	
-	public void assignTopics(File output) throws IOException {
-		double[] elogsticksBeta = expectationLogSticks(corpusSticks);
-		
+	public void assignTopics(File output) throws IOException {	
 		PrintWriter out = new PrintWriter(output, "UTF-8");
 		
 		for (CorpusDocument document : corpus) {
-			assignTopics(new HdpaDocument(document), elogsticksBeta, out);
+			assignTopics(new HdpaDocument(document), out);
 		}
 		
 		out.close();
 	}
 	
-	private void assignTopics(HdpaDocument document, double[] elogsticksBeta, PrintWriter out) {
-		
-		DocumentStats ds = inferDocumentParameters(document, elogsticksBeta);
-		
+	/**
+	 * For indexing.
+	 */
+	public double[] assignTopics(HdpaDocument document) { 
+		DocumentStats ds = inferDocumentParameters(document);
 		double weights[] = summarizeVarphi(ds.varphi);
+		
+		return weights;
+	}
+	
+	private void assignTopics(HdpaDocument document, PrintWriter out) {
+		double weights[] = assignTopics(document);
 		out.print(document.getId());
 		for (double d : weights) {
 			out.print(",");
@@ -1033,8 +1046,6 @@ public class Hdpa {
 			long start = System.currentTimeMillis();
 			LOG.info("evaluating model");
 			
-			double[] elogsticksBeta = expectationLogSticks(corpusSticks);
-			
 			int totalWords = 0;
 			double totalLogLikelihood = 0.0d;
 			
@@ -1042,7 +1053,7 @@ public class Hdpa {
 				HdpaDocument train = trainingDocuments.get(i);
 				HdpaDocument test = testDocuments.get(i);
 				
-				DocumentStats dstats = inferDocumentParameters(train, elogsticksBeta);
+				DocumentStats dstats = inferDocumentParameters(train);
 								
 				totalLogLikelihood += logPredictive(test, dstats);
 				totalWords += test.getTotalTermCount();
