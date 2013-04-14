@@ -10,6 +10,7 @@ public class AssignTopics {
 
 		File modelFile = null;
 		File corpusFile = null;
+		File topicsFile = null;
 		
 		for (int i = 0; i < args.length; i++) {
 			switch (i) {
@@ -19,6 +20,9 @@ public class AssignTopics {
 			case 1:
 				corpusFile = new File(args[i]);
 				break;
+			case 2:
+				topicsFile = new File(args[i]);
+				break;
 			default:
 			}
 		}
@@ -27,11 +31,9 @@ public class AssignTopics {
 			throw new IllegalArgumentException("no model specified!");
 		}
 		
-		
 		if (!modelFile.exists()) {
 			throw new IllegalArgumentException("file does not exist: " + args[0]);
 		}
-		
 		
 		if (corpusFile == null) {
 			corpusFile = HdpaUtils.getCorpusForModel(modelFile);
@@ -41,8 +43,13 @@ public class AssignTopics {
 			throw new IllegalArgumentException("file does not exist: " + args[1]);
 		}
 		
+		if (topicsFile == null) {
+			topicsFile = new File(modelFile.getParentFile(), "doctopics-" + modelFile.getName());
+		}
 		
-		File topicsFile = new File(modelFile.getParentFile(), "doctopics-" + modelFile.getName());
+		if (!topicsFile.getParentFile().exists()) {
+			throw new IllegalArgumentException("file does not exist: " + topicsFile.getParent());
+		}
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);
 		corpus.open();
