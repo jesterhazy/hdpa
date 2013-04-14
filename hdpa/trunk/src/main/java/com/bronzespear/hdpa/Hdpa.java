@@ -138,7 +138,7 @@ public class Hdpa {
 	private static final double CONVERGENCE_THRESHOLD = 0.0001d;
 	
 	// data parameters
-	CorpusReader corpus;
+	private CorpusReader corpus;
 	private int D; // total number of documents
 	private int M; // number of modes
 	private int[] W; // number of words per mode
