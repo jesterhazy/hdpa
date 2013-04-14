@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.bronzespear.hdpa</groupId>
 	<artifactId>hdpa</artifactId>
-	<version>0.0.2</version>
+	<version>1.0.0</version>
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>
@@ -51,7 +51,12 @@
 			<artifactId>mockito-core</artifactId>
 			<version>1.9.5</version>
 			<scope>test</scope>
-		</dependency>          
+		</dependency>
+		<dependency>
+			<groupId>org.apache.solr</groupId>
+			<artifactId>solr-solrj</artifactId>
+			<version>4.2.1</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
