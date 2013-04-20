@@ -35,7 +35,7 @@ public class LdaEvaluator {
 		Hdpa hdpa = new Hdpa(null);
 		hdpa.loadParameters(modelFile);
 		
-		this.K = hdpa.K;
+		this.K = hdpa.getK();
 		this.W = hdpa.lambda[WORD_MODE][0].length;
 		this.batch = hdpa.getBatchNumber();
 		this.totalDocs = hdpa.getDocumentsProcessed();

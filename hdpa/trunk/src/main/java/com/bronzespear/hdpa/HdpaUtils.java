@@ -207,4 +207,28 @@ public class HdpaUtils {
 		File corpusFile = new File(modelFile.getParentFile().getParentFile(), corpusName);
 		return corpusFile;
 	}
+
+	public static String join(String separator, List<String> strings) {
+		StringBuilder sb = new StringBuilder();
+		
+		for (int i = 0; i < strings.size(); i++) {
+			if (i > 0) {
+				sb.append(separator);				
+			}
+			
+			sb.append(strings.get(i));
+		}
+		
+		return sb.toString();
+	}
+
+	public static List<String> quote(List<String> strings) {
+		List<String> quoted = new ArrayList<String>(strings.size());
+		
+		for (String string : strings) {
+			quoted.add("\"" + string + "\"");
+		}
+		
+		return quoted;
+	}
 }
