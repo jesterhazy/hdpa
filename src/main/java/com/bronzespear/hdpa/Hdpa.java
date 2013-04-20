@@ -149,7 +149,7 @@ public class Hdpa {
 	private double learningScale = 1.0d; // scale parameter for learning rate
 	private double kappa = 0.9d; // exponent for learning rate (value from Hoffman et al. 2012) 
 
-	int K = 300; // top-level topic truncation
+	private int K = 300; // top-level topic truncation
 	private int T = 20; // doc-level topic truncation
 
 	double gamma = 1.0d; // concentration parameter for top-level sticks
@@ -1105,5 +1105,24 @@ public class Hdpa {
 
 	public void setKappa(double kappa) {
 		this.kappa = kappa;
+	}
+
+	public int getK() {
+		return K;
+	}
+
+	public List<String> topTerms(int k, int m, int limit) {
+		int[] termIds = argsort(lambda[m][k], true);
+		limit = FastMath.min(limit, termIds.length);
+		
+		List<String> terms = new ArrayList<String>(limit);
+		
+		for (int i = 0; i < limit; i++) {
+			int w = termIds[i];
+			String term = corpus.getDictionary(m).getTerm(w);
+			terms.add(term);
+		}
+		
+		return terms;
 	}
 }

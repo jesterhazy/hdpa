@@ -42,7 +42,7 @@ public class HdpaTest {
 		assertNotNull(hdpa.eta);
 		
 		assertEquals(1200, hdpa.lambda.length * hdpa.lambda[0].length);
-		assertEquals(hdpa.K - 1, hdpa.corpusSticks[0].length);
+		assertEquals(hdpa.getK() - 1, hdpa.corpusSticks[0].length);
 		assertNotNull(hdpa.elogPhi);
 	}
 	

@@ -12,18 +12,18 @@ import com.bronzespear.hdpa.HdpaUtils;
 import com.bronzespear.hdpa.corpus.CorpusDocument;
 import com.bronzespear.hdpa.corpus.CorpusReader;
 
-public class IndexCorpus {
+public class IndexDocuments {
 	
 	private static final String SOLR_URL = "http://localhost:8983/solr/hdpa";
-	private static final Log LOG = LogFactory.getLog(IndexCorpus.class);
-	private static final int SOLR_BATCH_SIZE = 100;
-	private static final int SOLR_THREAD_COUNT = 10;
+	private static final Log LOG = LogFactory.getLog(IndexDocuments.class);
+	private static final int SOLR_BATCH_SIZE = 1000;
+	private static final int SOLR_THREAD_COUNT = 5;
 	
 	private CorpusReader corpus;
 	private TopicStrategy topicStrategy;
 	
 	
-	public IndexCorpus(File file, File corpusFile) throws IOException {
+	public IndexDocuments(File file, File corpusFile) throws IOException {
 		this.corpus = new CorpusReader(corpusFile);	
 		
 		if (isModelFile(file)) {
@@ -48,13 +48,25 @@ public class IndexCorpus {
 		int documentCount = 0;
 		for (CorpusDocument corpusDocument : corpus) {
 			double[] topicWeights = topicStrategy.getTopics(corpusDocument);
-			SolrInputDocument solrDocument = createSolrDocument(corpusName, corpusDocument, topicWeights);
-
-			server.add(solrDocument);
-			documentCount++;
+			
+			if (topicWeights != null) {
+				SolrInputDocument solrDocument = createSolrDocument(corpusName, corpusDocument, topicWeights);
+				
+				server.add(solrDocument);
+				documentCount++;
+			}
 			
 			if (documentCount % 1000 == 0) {
 				LOG.info(String.format("queued %d documents", documentCount));
+			}
+			
+			if (documentCount % 5000 == 0) {
+				LOG.info("solr commit");
+				server.commit();	
+			}
+			
+			if (documentCount % 50000 == 0) {
+				server.blockUntilFinished();
 			}
 		}
 		
@@ -64,7 +76,10 @@ public class IndexCorpus {
 		
 		LOG.info("solr commit");
 		server.commit();
-		server.optimize();
+		
+//		memory intensive for large index - best to do in solr admin ui 
+//		after ensuring enough memory is available		
+//		server.optimize(); 
 		
 		topicStrategy.close();
 		corpus.close();
@@ -98,7 +113,7 @@ public class IndexCorpus {
 			throw new IllegalArgumentException("file does not exist: " + corpusFile.getPath());
 		}
 		
-		IndexCorpus app = new IndexCorpus(file, corpusFile);
+		IndexDocuments app = new IndexDocuments(file, corpusFile);
 		app.run();
 	}
 
