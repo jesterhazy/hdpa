@@ -11,11 +11,14 @@ public class MathUtils {
 	 * error (relative or absolute) for approximate double comparisons
 	 */
 	static final double EPSILON = 0.0000001d;
+	private static PsiFunction psi = new BealPsiFunction();
+	private static SumFunction sum = new SimpleSumFunction();
+	private static ExpFunction exp = new CommonsExpFunction();
 
 	private MathUtils() { }
 
 	public static double sum(double... values) {
-		return impl.sum(values);
+		return sum.sum(values);
 	}
 	
 	public static int sum(int... values) {
@@ -37,7 +40,7 @@ public class MathUtils {
 	}
 	
 	public static double psi(double x) {
-		return impl.psi(x);
+		return psi.psi(x);
 	}
 	
 	public static double[] cumulativeSum(double[] x) {	
@@ -63,7 +66,7 @@ public class MathUtils {
 		double[] result = new double[x.length];
 
 		for (int i = 0; i < x.length; i++) {
-			result[i] = FastMath.exp(x[i]);
+			result[i] = exp.exp(x[i]);
 		}
 		
 		return result;
@@ -204,67 +207,33 @@ public class MathUtils {
 		}
 	}
 	
-	/* begin Impl interface and implementation classes */
-	
-	private static Impl impl = new Accurate();
-	
-	public static void fast() {
-		impl = new Fast();
+	public static double[] abs(double[] x) {
+		double[] d = new double[x.length];
+		
+		for (int i = 0; i < x.length; i++) {
+			d[i] = FastMath.abs(x[i]);
+		}
+		
+		return d;
 	}
-	
-	public static void accurate() {
-		impl = new Accurate();
+
+	public static double mean(double[] x) {
+		return sum(x) / (double) x.length;
 	}
+
 	
-	private static interface Impl {
-		double[] cumulativeProduct(double... x);
+	static interface PsiFunction {
 		double psi(double x);
-		double sum(double... values);
 	}
 	
-	private static final class Fast implements Impl {
-		public double[] cumulativeProduct(double... values) {
-			double product = 1.0d;
-			double[] y = new double[values.length];
-
-			for (int i = 0; i < values.length; i++) {
-				product *= values[i];
-				y[i] = product;
-			}
-
-			return y;
-		}
-		
-		public double psi(double x) {
-			if (Double.isNaN(x)) {
-				throw new IllegalArgumentException();
-			}
-			
-			return Gamma.digamma(x);
-		}
-		
-		public double sum(double... values) {
-			double sum = 0.0;
-			for (double d : values) {
-				sum += d;
-			}
-			
-			return sum;
-		}
+	static void setPsiFunction(PsiFunction psi) {
+		MathUtils.psi = psi; 
 	}
 	
-	private static final class Accurate implements Impl {
-		public double[] cumulativeProduct(double... x) {
-			double[] logs = log(x);
-			double[] sums = cumulativeSum(logs);
-			double[] result = exp(sums);
-			return result;
-		}
-		
+	static final class BealPsiFunction implements PsiFunction {
 		public double psi(double x) {
 			
 			// per. Beal (2003)
-			
 			if (Double.isNaN(x)) {
 				throw new IllegalArgumentException();
 			}
@@ -289,8 +258,40 @@ public class MathUtils {
 			
 			return psi;
 		}
-		
+	}
+	
+	static final class CommonsPsiFunction implements PsiFunction {
+		public double psi(double x) {
+			if (Double.isNaN(x)) {
+				throw new IllegalArgumentException();
+			}
+			
+			return Gamma.digamma(x);
+		}
+	}
+	
+	static interface SumFunction {
+		double sum(double... values);
+	}
+	
+	static void setSumFunction(SumFunction sum) {
+		MathUtils.sum = sum; 
+	}
+	
+	static final class SimpleSumFunction implements SumFunction {
 		public double sum(double... values) {
+			double sum = 0.0;
+			for (double d : values) {
+				sum += d;
+			}
+			
+			return sum;
+		}
+	}
+	
+	static final class KahanSumFunction implements SumFunction {
+		public double sum(double... values) {
+			// kahan summation
 			double result = 0.0d;
 			
 			if (values.length == 1) {
@@ -318,18 +319,41 @@ public class MathUtils {
 			return result;
 		}
 	}
-
-	public static double[] abs(double[] x) {
-		double[] d = new double[x.length];
-		
-		for (int i = 0; i < x.length; i++) {
-			d[i] = FastMath.abs(x[i]);
+	
+	static interface ExpFunction {
+		double exp(double x);
+	}
+	
+	static void setExpFunction(ExpFunction exp) {
+		MathUtils.exp = exp;
+	}
+	
+	static final class CommonsExpFunction implements ExpFunction {
+		public double exp(double x) {
+			return FastMath.exp(x);
+		}
+	}
+	
+	static final class SchraudolphExpFunction implements ExpFunction {
+		public double exp(double x) {
+			// http://martin.ankerl.com/2007/02/11/optimized-exponential-functions-for-java/
+			final long tmp = (long) (1512775 * x + (1072693248 - 60801));
+			return Double.longBitsToDouble(tmp << 32);
+		}
+	}
+	
+	static final class SchraudolphBetterExpFunction implements ExpFunction {
+		public double exp(double x) {
+			// http://martin.ankerl.com/2007/02/11/optimized-exponential-functions-for-java/
+			// + Schraudolph's comments (better_exp)
+			final double x2 = x / 2d;
+			return exp2(x2) / exp2(-x2);
 		}
 		
-		return d;
-	}
-
-	public static double mean(double[] x) {
-		return sum(x) / (double) x.length;
+		public double exp2(double val) {
+			// http://martin.ankerl.com/2007/02/11/optimized-exponential-functions-for-java/
+		    final long tmp = (long) (1512775 * val + (1072693248));
+		    return Double.longBitsToDouble(tmp << 32);
+		}
 	}
 }
