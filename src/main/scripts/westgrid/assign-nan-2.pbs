@@ -1,0 +1,19 @@
+#!/bin/bash
+#PBS -S /bin/bash
+#PBS -l walltime=72:00:00
+#PBS -l mem=6g
+#PBS -r n
+#PBS -M jonathan.esterhazy@gmail.com
+#PBS -m bea
+
+cd $PBS_O_WORKDIR
+echo "Current working directory is `pwd`"
+
+echo "Starting run at: `date`"
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.AssignTopics \
+  /home/jester/data/nan-random-t5000-model-b500-k0.9-20130401-1829/final.csv \
+  /home/jester/data/nan-random-d100000-t5000 \
+  /home/jester/data/nan-random-t5000-model-b500-k0.9-20130401-1829/doctopics-final-d100000.csv
+
+echo "Program finished with exit code $? at: `date`"
+
