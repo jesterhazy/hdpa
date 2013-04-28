@@ -48,7 +48,7 @@ public class LdaEvaluator {
 	private void initializeResultsWriter(File modelFile) throws IOException {
 		File resultsFile = 
 				new File(modelFile.getParentFile(), String.format("eval-%s.txt",
-				HdpaUtils.formattedTimestamp(System.currentTimeMillis())));
+				HdpaUtils.formattedTimestamp()));
 
 		resultsWriter = new PrintWriter(resultsFile, "UTF-8");
 		resultsWriter.printf(RESULTS_HEADER_FORMAT,
