@@ -44,7 +44,10 @@ public class AssignTopics {
 		}
 		
 		if (topicsFile == null) {
-			topicsFile = new File(modelFile.getParentFile(), "doctopics-" + modelFile.getName());
+			topicsFile = new File(modelFile.getParentFile(), String.format(
+					"doctopics-%s-%s.csv",
+					modelFile.getName().replaceAll("\\.csv$", ""),
+					HdpaUtils.formattedTimestamp())); 					
 		}
 		
 		if (!topicsFile.getParentFile().exists()) {

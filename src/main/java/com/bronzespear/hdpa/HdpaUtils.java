@@ -196,6 +196,10 @@ public class HdpaUtils {
 		
 		return new int[][] {ids, counts};
 	}
+	
+	public static String formattedTimestamp() {
+		return formattedTimestamp(System.currentTimeMillis());
+	}
 
 	public static String formattedTimestamp(Long timestamp) {
 		return String.format("%1$tY%1$tm%1$td-%1$tH%1$tM", timestamp);
