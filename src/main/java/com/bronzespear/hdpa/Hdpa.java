@@ -1080,14 +1080,27 @@ public class Hdpa {
 	public int getK() {
 		return K;
 	}
-
-	public List<String> topTerms(int k, int m, int limit) {
+	
+	public int[][] topTermIds(int m, int limit) {
+		int[][] termIds = new int[K][];
+		for (int k = 0; k < K; k++) {
+			termIds[k] = topTermIds(k, m, limit);
+		}
+		
+		return termIds;
+	}
+	
+	private int[] topTermIds(int k, int m, int limit) {
 		int[] termIds = argsort(lambda[m][k], true);
-		limit = FastMath.min(limit, termIds.length);
+		return Arrays.copyOf(termIds, FastMath.min(limit, termIds.length));
+	}
+	
+	public List<String> topTerms(int k, int m, int limit) {
+		int[] termIds = topTermIds(k, m, limit);
 		
-		List<String> terms = new ArrayList<String>(limit);
+		List<String> terms = new ArrayList<String>(termIds.length);
 		
-		for (int i = 0; i < limit; i++) {
+		for (int i = 0; i < termIds.length; i++) {
 			int w = termIds[i];
 			String term = corpus.getDictionary(m).getTerm(w);
 			terms.add(term);
