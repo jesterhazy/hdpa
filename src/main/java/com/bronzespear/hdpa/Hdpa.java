@@ -194,9 +194,11 @@ public class Hdpa {
 //		corpusSticks = new double[][] { fill(1.0d, K - 1), fill(gamma, K - 1)}; // Hoffman2012
 	}
 	
+	//np.random.gamma(1.0, 1.0, (T, W)) * D*100/(T*W)-eta
+	
 	private void initializeLambda() {
 		LOG.debug("initializing lambda");
-		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
+		GammaDistribution gammaDistribution = new GammaDistribution(1.0d, 1.0d);
 		double[][][] array = new double[M][K][];
 
 		for (int m = 0; m < M; m++) {
@@ -204,13 +206,31 @@ public class Hdpa {
 				array[m][k] = new double[W[m]];
 
 				for (int w = 0; w < W[m]; w++) {
-					array[m][k][w] = gammaDistribution.sample();
+					array[m][k][w] = ((gammaDistribution.sample() * D * 100) / (double) (K * W[m])) - eta;
 				}
 			}
 		}
 		
 		lambda = array;
 	}
+	
+//	private void initializeLambda() {
+//		LOG.debug("initializing lambda");
+//		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
+//		double[][][] array = new double[M][K][];
+//
+//		for (int m = 0; m < M; m++) {
+//			for (int k = 0; k < K; k++) {
+//				array[m][k] = new double[W[m]];
+//
+//				for (int w = 0; w < W[m]; w++) {
+//					array[m][k][w] = gammaDistribution.sample();
+//				}
+//			}
+//		}
+//		
+//		lambda = array;
+//	}
 	
 	private void processBatch(List<HdpaDocument> documents) {
 		long start = System.currentTimeMillis();
