@@ -23,7 +23,8 @@ public class HdpaTest {
 		
 		when(corpus.getDocumentCount()).thenReturn(1000);
 		when(corpus.getModeCount()).thenReturn(4);
-		when(corpus.getTermCount(anyInt())).thenReturn(100);		
+		when(corpus.getTermCount(anyInt())).thenReturn(100);
+		when(corpus.getAverageTermsPerDoc()).thenReturn(new double[4]);
 
 		File file = new File("save.csv");
 		file.deleteOnExit();
