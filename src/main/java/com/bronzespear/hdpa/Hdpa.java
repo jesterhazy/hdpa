@@ -33,7 +33,7 @@ public class Hdpa {
 
 	public class BatchStats {
 		private int batchSize;
-		private double[][] batchBeta; // ss for beta parameters (u, v)
+		private double[][] batchVarphi; // ss for beta parameters (u, v)
 		private double[][][] batchLambda; // ss for lambda parameters
 		private int iterations; // total iterations for this batch
 		
@@ -51,8 +51,8 @@ public class Hdpa {
 			
 			iterations += docIterations;
 			updateTermIds(doc);
-			updateBeta(docVarphi);
-			updatePhi(docVarphi, docZeta, doc);
+			updateVarphi(docVarphi);
+			updateLambda(docVarphi, docZeta, doc);
 		}
 		
 		private void updateTermIds(HdpaDocument doc) {
@@ -73,32 +73,29 @@ public class Hdpa {
 			}
 		}
 
-		private void updatePhi(double[][] docVarphi, double[][][] docZeta, HdpaDocument doc) {
+		private void updateLambda(double[][] docVarphi, double[][][] docZeta, HdpaDocument doc) {
 			int[][] ids = doc.getTermIds();
 			int[][] counts = doc.getTermCounts();
-			double[] tmp = new double[T];
 			
 			for (int m = 0; m < M; m++) {
 				for (int k = 0; k < K; k++) {
 					for (int n = 0; n < ids[m].length; n++) {
 						int w = ids[m][n];
 						for (int t = 0; t < T; t++) {
-							tmp[t] = docVarphi[t][k] * docZeta[m][n][t];
+							batchLambda[m][k][w] += docVarphi[t][k] * docZeta[m][n][t] * counts[m][n];
 						}
-						
-						batchLambda[m][k][w] += sum(tmp) * counts[m][n]; 
 					}
 				}
 			}			
 		}
-
-		private void updateBeta(double[][] docVarphi) {
-			if (batchBeta == null) {
-				batchBeta = docVarphi;
+		
+		private void updateVarphi(double[][] docVarphi) {
+			if (batchVarphi == null) {
+				batchVarphi = docVarphi;
 			}
 
 			else {
-				batchBeta = matrixAdd(batchBeta, docVarphi);
+				batchVarphi = matrixAdd(batchVarphi, docVarphi);
 			}
 		}
 
@@ -162,6 +159,7 @@ public class Hdpa {
 	private long inferenceTime;
 	private long updateTime;
 	private int batchSize;
+	private double[] averageTermsPerDoc;
 	
 	public Hdpa(CorpusReader corpus) {
 		this.corpus = corpus;
@@ -174,13 +172,16 @@ public class Hdpa {
 		
 		this.D = corpus.getDocumentCount();
 		this.M = corpus.getModeCount(); 
-//		this.M = 1; // use this to limit analysis to mode 0 (words)
+//		this.M = 1; // use this to limit training to mode 0 (words)
+		
 		this.W = new int[M];
 		this.eta = 0.01d; // Wang2011
 
 		for (int m = 0; m < M; m++) {
-			W[m] = corpus.getTermCount(m);
+			this.W[m] = corpus.getTermCount(m);
 		}
+		
+		this.averageTermsPerDoc = corpus.getAverageTermsPerDoc();
 		
 		initializeCorpusSticks();
 		updateElogBeta();
@@ -194,11 +195,10 @@ public class Hdpa {
 //		corpusSticks = new double[][] { fill(1.0d, K - 1), fill(gamma, K - 1)}; // Hoffman2012
 	}
 	
-	//np.random.gamma(1.0, 1.0, (T, W)) * D*100/(T*W)-eta
-	
 	private void initializeLambda() {
 		LOG.debug("initializing lambda");
 		GammaDistribution gammaDistribution = new GammaDistribution(1.0d, 1.0d);
+		gammaDistribution.reseedRandomGenerator(999931111L);
 		double[][][] array = new double[M][K][];
 
 		for (int m = 0; m < M; m++) {
@@ -206,31 +206,13 @@ public class Hdpa {
 				array[m][k] = new double[W[m]];
 
 				for (int w = 0; w < W[m]; w++) {
-					array[m][k][w] = ((gammaDistribution.sample() * D * 100) / (double) (K * W[m])) - eta;
+					array[m][k][w] = (gammaDistribution.sample() * D * averageTermsPerDoc[m]) / (double) (K * W[m]);
 				}
 			}
 		}
 		
 		lambda = array;
 	}
-	
-//	private void initializeLambda() {
-//		LOG.debug("initializing lambda");
-//		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
-//		double[][][] array = new double[M][K][];
-//
-//		for (int m = 0; m < M; m++) {
-//			for (int k = 0; k < K; k++) {
-//				array[m][k] = new double[W[m]];
-//
-//				for (int w = 0; w < W[m]; w++) {
-//					array[m][k][w] = gammaDistribution.sample();
-//				}
-//			}
-//		}
-//		
-//		lambda = array;
-//	}
 	
 	private void processBatch(List<HdpaDocument> documents) {
 		long start = System.currentTimeMillis();
@@ -277,7 +259,6 @@ public class Hdpa {
 	}
 	
 	private void processDocument(HdpaDocument doc, BatchStats bstats) {
-		
 		inferDocumentParameters(doc);
 		totalIterations += docIterations;
 		documentsProcessed++;
@@ -294,23 +275,31 @@ public class Hdpa {
 			LOG.debug("processing document: " + document.getId());
 		}
 		
-		initializeZeta(document);
-		
-		// document sticks will be updated prior to first use
+		// these will be updated before first use
 		double[][] documentSticks = null;
-
-		// faster than random init
-		double[] elogsticksPi = fill(0.0d, T);
+		double[] elogsticksPi = null;
+		
+		initializeZeta(document);
 		initializeVarphi();
 		
 		docIterations = 0;
 		boolean converged = false;
 		double likelihood = -Double.MAX_VALUE;
 		while (!converged && docIterations < MAX_ITERATIONS) {
-			updateZeta(document, elogsticksPi);
-			updateVarphi(document);
-			documentSticks = updateDocumentSticks();
-			elogsticksPi = expectationLogSticks(documentSticks);
+			if (MIN_ITERATIONS > docIterations) {
+				updateZeta(document, null);
+				updateVarphi(document, null);
+			}
+			
+			else {
+				updateZeta(document, elogsticksPi);
+				updateVarphi(document, elogsticksBeta);
+			}
+			
+			if (MIN_ITERATIONS - 1 <= docIterations) {
+				documentSticks = updateDocumentSticks();
+				elogsticksPi = expectationLogSticks(documentSticks);
+			}
 
 			docIterations++;
 			
@@ -364,16 +353,19 @@ public class Hdpa {
 	
 	private void updateCorpusSticks(double rho, BatchStats bstats) {
 		for (int k = 0; k < K - 1; k++) {
-			double[] uComponents = new double[T];
-			double[] vComponents = new double[T];
+			double u = 0.0d;
+			double v = 0.0d;
 			
 			for (int t = 0; t < T; t++) {
-				uComponents[t] = bstats.batchBeta[t][k];
-				vComponents[t] = sum(Arrays.copyOfRange(bstats.batchBeta[t], k + 1, K));
+				u += bstats.batchVarphi[t][k];
+				
+				for (int i = k + 1; i < K; i++) {
+					v += bstats.batchVarphi[t][i];
+				}
 			}
 			
-			double uGradient = 1 + (bstats.batchWeight() * sum(uComponents));
-			double vGradient = gamma + (bstats.batchWeight() * sum(vComponents));
+			double uGradient = 1 + (bstats.batchWeight() * u);
+			double vGradient = gamma + (bstats.batchWeight() * v);
 			
 			corpusSticks[0][k] = ((1.0d - rho) * corpusSticks[0][k]) + (rho * uGradient);
 			corpusSticks[1][k] = ((1.0d - rho) * corpusSticks[1][k]) + (rho * vGradient);
@@ -493,7 +485,8 @@ public class Hdpa {
 		
 		return array;
 	}
-
+	
+	
 	private double[] expectationLogSticks(double[][] sticks) {
 		double[] psisum = psi(vectorAdd(sticks[0], sticks[1]));
 		double[] eloga = vectorSubtract(psi(sticks[0]), psisum);
@@ -535,42 +528,29 @@ public class Hdpa {
 	private double[][] updateDocumentSticks() {
 		double[][] documentSticks = new double[2][T - 1];
 		
-		int size = mnSizeOfZeta();
-		
-		double[] a = new double[size + 1];
-		double[] b = new double[size + 1];
-		a[0] = 1.0d;
-		b[0] = alpha;
-		
 		for (int t = 0; t < T - 1; t++) {
-			int i = 1;
+			double a = 0.0d;
+			double b = 0.0d;
 			for (int m = 0; m < docZeta.length; m++) {
 				for (int n = 0; n < docZeta[m].length; n++) {
-					a[i] = docZeta[m][n][t];
-					b[i] = sum(Arrays.copyOfRange(docZeta[m][n], t + 1, T));
-					i++;
+					a += docZeta[m][n][t];
+					
+					for (int i = t + 1; i < T; i++) {
+						b += docZeta[m][n][i];
+					}
 				}
 			}
 			
-			documentSticks[0][t] = sum(a);
-			documentSticks[1][t] = sum(b);
+			documentSticks[0][t] = 1.0d + a;
+			documentSticks[1][t] = alpha + b;
 		}
 		
 		return documentSticks;
-	}
-
-	private int mnSizeOfZeta() {
-		int size = 0;
-		for (int m = 0; m < docZeta.length; m++) {
-			size += docZeta[m].length;
-		}
-		return size;
 	}
 	
 	private void updateZeta(HdpaDocument doc, double[] elogsticksPi) {	
 		int[][] ids = doc.getTermIds();
 		int[][] counts = doc.getTermCounts();
-		
 		
 		double tmp = 0.0d;
 		for (int m = 0; m < M; m++) {
@@ -584,7 +564,11 @@ public class Hdpa {
 						tmp += docVarphi[t][k] * elogPhi[m][k][w];
 					}
 					
-					docZeta[m][n][t] = (tmp * count) + elogsticksPi[t];
+					docZeta[m][n][t] = tmp * count;
+					
+					if (elogsticksPi != null) {
+						docZeta[m][n][t] += elogsticksPi[t];
+					}
 				}
 				
 				docZeta[m][n] = exp(logNormalize(docZeta[m][n]));
@@ -592,13 +576,13 @@ public class Hdpa {
 		}
 	}
 	
-	private void updateVarphi(HdpaDocument doc) {
+	private void updateVarphi(HdpaDocument doc, double[] elogsticksBeta) {
 		int[][] ids = doc.getTermIds();
 		int[][] counts = doc.getTermCounts();
 		
 		for (int t = 0; t < T; t++) {
 			for (int k = 0; k < K; k++) {				
-				docVarphi[t][k] = elogsticksBeta[k];
+				docVarphi[t][k] = elogsticksBeta == null ? 0.0d : elogsticksBeta[k];
 
 				for (int m = 0; m < M; m++) {
 					for (int n = 0; n < ids[m].length; n++) {

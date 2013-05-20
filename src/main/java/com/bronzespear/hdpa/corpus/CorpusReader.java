@@ -130,6 +130,17 @@ public class CorpusReader extends Corpus implements Iterable<CorpusDocument> {
 		}
 	}
 	
+	public double[] getAverageTermsPerDoc() {
+		
+		double[] array = new double[CorpusMode.SIZE];
+		
+		for (int i = 0; i < array.length; i++) {
+			array[i] = (double) mmReaders[i].size() / getDocumentCount();
+		}
+		
+		return array;
+	}
+	
 	public void reopen() throws IOException {
 		close();
 		open(false);
