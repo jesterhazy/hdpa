@@ -159,7 +159,7 @@ public class Hdpa {
 	private long inferenceTime;
 	private long updateTime;
 	private int batchSize;
-	private double[] averageTermsPerDoc;
+//	private double[] averageTermsPerDoc;
 	
 	public Hdpa(CorpusReader corpus) {
 		this.corpus = corpus;
@@ -181,7 +181,7 @@ public class Hdpa {
 			this.W[m] = corpus.getTermCount(m);
 		}
 		
-		this.averageTermsPerDoc = corpus.getAverageTermsPerDoc();
+//		this.averageTermsPerDoc = corpus.getAverageTermsPerDoc();
 		
 		initializeCorpusSticks();
 		updateElogBeta();
@@ -216,7 +216,8 @@ public class Hdpa {
 	
 	private void initializeLambda() {
 		LOG.debug("initializing lambda");
-		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
+//		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
+		GammaDistribution gammaDistribution = new GammaDistribution(50.0d, 0.02d);
 		gammaDistribution.reseedRandomGenerator(999931111L);
 		double[][][] array = new double[M][K][];
 
