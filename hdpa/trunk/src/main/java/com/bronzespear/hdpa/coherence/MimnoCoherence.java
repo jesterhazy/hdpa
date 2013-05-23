@@ -1,7 +1,8 @@
 package com.bronzespear.hdpa.coherence;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,8 +55,8 @@ public class MimnoCoherence {
 		corpus.close();
 	}
 
-	public void report() {
-		PrintStream out = System.out;
+	public void report(File outputFile) throws IOException {
+		PrintWriter out = new PrintWriter(outputFile);
 		
 		out.println("topic   coherence   terms");
 		out.println("-----   ---------   -----");
@@ -85,6 +86,8 @@ public class MimnoCoherence {
 				out.printf("%6d\n", occurrenceCounts[i]);
 			}
 		}
+		
+		out.close();
 	}
 
 	private void calculateCoherence() {

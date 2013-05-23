@@ -46,9 +46,12 @@ public class HdpaCoherence {
 		Corpus corpus = new HdpaCorpus(corpusReader);
 		Model model = new HdpaModel(h, modelFile);
 		
+		String outputFileName = String.format("coherence-%s.txt", HdpaUtils.formattedTimestamp());
+		File outputFile = new File(modelFile.getParentFile(), outputFileName);
+		
 		MimnoCoherence coherence = new MimnoCoherence(corpus, model);
 //		coherence.setDocumentLimit(2000);
 		coherence.calculate();
-		coherence.report();
+		coherence.report(outputFile);
 	}
 }
