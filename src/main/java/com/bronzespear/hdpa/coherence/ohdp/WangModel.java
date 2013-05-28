@@ -13,6 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.bronzespear.hdpa.ArrayUtils;
+import com.bronzespear.hdpa.MathUtils;
 import com.bronzespear.hdpa.coherence.Model;
 
 public class WangModel extends Model {
@@ -28,15 +29,23 @@ public class WangModel extends Model {
 		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(topicsFile), "UTF-8"));
 
 		List<int[]> termIdsList = new ArrayList<int[]>();
+		List<Double> topicPrevalenceList = new ArrayList<Double>();
 		String line = null;
 		while ((line = reader.readLine()) != null) {
 			double[] topic = parseLine(line);
 			int[] topIds = Arrays.copyOf(ArrayUtils.argsort(topic, true), termLimit);
 			termIdsList.add(topIds);
+			topicPrevalenceList.add(MathUtils.sum(topic));
 		}
 		
 		topTermIds = termIdsList.toArray(new int[0][]);
 		numberOfTopics = topTermIds.length;
+		
+		topicPrevalence = new double[numberOfTopics];
+		for (int i = 0; i < numberOfTopics ; i++) {
+			topicPrevalence[i] = topicPrevalenceList.get(i).doubleValue();
+		}
+		MathUtils.normalize(topicPrevalence);
 		
 		reader.close();
 		

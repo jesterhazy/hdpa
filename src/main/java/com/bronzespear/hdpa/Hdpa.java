@@ -159,7 +159,6 @@ public class Hdpa {
 	private long inferenceTime;
 	private long updateTime;
 	private int batchSize;
-//	private double[] averageTermsPerDoc;
 	
 	public Hdpa(CorpusReader corpus) {
 		this.corpus = corpus;
@@ -181,8 +180,6 @@ public class Hdpa {
 			this.W[m] = corpus.getTermCount(m);
 		}
 		
-//		this.averageTermsPerDoc = corpus.getAverageTermsPerDoc();
-		
 		initializeCorpusSticks();
 		updateElogBeta();
 		
@@ -195,29 +192,9 @@ public class Hdpa {
 //		corpusSticks = new double[][] { fill(1.0d, K - 1), fill(gamma, K - 1)}; // Hoffman2012
 	}
 	
-//	private void initializeLambda() {
-//		LOG.debug("initializing lambda");
-//		GammaDistribution gammaDistribution = new GammaDistribution(1.0d, 1.0d);
-//		gammaDistribution.reseedRandomGenerator(999931111L);
-//		double[][][] array = new double[M][K][];
-//
-//		for (int m = 0; m < M; m++) {
-//			for (int k = 0; k < K; k++) {
-//				array[m][k] = new double[W[m]];
-//
-//				for (int w = 0; w < W[m]; w++) {
-//					array[m][k][w] = (gammaDistribution.sample() * D * averageTermsPerDoc[m]) / (double) (K * W[m]);
-//				}
-//			}
-//		}
-//		
-//		lambda = array;
-//	}
-	
 	private void initializeLambda() {
 		LOG.debug("initializing lambda");
-//		GammaDistribution gammaDistribution = new GammaDistribution(100.0d, 0.01d);
-		GammaDistribution gammaDistribution = new GammaDistribution(50.0d, 0.02d);
+		GammaDistribution gammaDistribution = new GammaDistribution(5.0d, 0.2d); // diverse word lists, decent weights, good likelihood\
 		gammaDistribution.reseedRandomGenerator(999931111L);
 		double[][][] array = new double[M][K][];
 
@@ -833,6 +810,10 @@ public class Hdpa {
 		}
 		
 		LOG.info("done saving");
+	}
+	
+	public double[] getTopicWeights() {
+		return calculateStickWeights(corpusSticks);
 	}
 	
 	private double[] calculateStickWeights(double[][] sticks) {
