@@ -13,6 +13,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math3.util.FastMath;
 
+import com.bronzespear.hdpa.ArrayUtils;
+
 public class MimnoCoherence {
 	
 	private static final Log LOG = LogFactory.getLog(MimnoCoherence.class);
@@ -58,10 +60,11 @@ public class MimnoCoherence {
 	public void report(File outputFile) throws IOException {
 		PrintWriter out = new PrintWriter(outputFile);
 		
+		int[] idx = ArrayUtils.argsort(model.getTopicPrevalence(), true);
 		out.println("topic         weight      coherence   terms");
 		out.println("-----   ------------   ------------   -----");
-		for (int k = 0; k < model.numberOfTopics(); k++) {
-			out.printf("%5d   %12.6f   %12.6f   %s\n", k, model.getTopicPrevalence()[k], coherenceScores[k], corpus.getTerms(model.topTermIds(k)));
+		for (int i : idx) {
+			out.printf("%5d   %12.6f   %12.6f   %s\n", i, model.getTopicPrevalence()[i], coherenceScores[i], corpus.getTerms(model.topTermIds(i)));
 		}
 		
 		
