@@ -10,6 +10,6 @@ cd $PBS_O_WORKDIR
 echo "Current working directory is `pwd`"
 
 echo "Starting run at: `date`"
-/home/jester/hdpa/run.sh com.bronzespear.hdpa.TrainHdpa /home/jester/data/nyt-random-t5000 2000 1000 0.9
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.TrainHdpa /home/jester/data/nyt-random-t5000 10000 1000 0.9
 echo "Program finished with exit code $? at: `date`"
 
