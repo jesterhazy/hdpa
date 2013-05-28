@@ -58,10 +58,10 @@ public class MimnoCoherence {
 	public void report(File outputFile) throws IOException {
 		PrintWriter out = new PrintWriter(outputFile);
 		
-		out.println("topic   coherence   terms");
-		out.println("-----   ---------   -----");
+		out.println("topic         weight      coherence   terms");
+		out.println("-----   ------------   ------------   -----");
 		for (int k = 0; k < model.numberOfTopics(); k++) {
-			out.printf("%5d   %f   %s\n", k, coherenceScores[k], corpus.getTerms(model.topTermIds(k)));
+			out.printf("%5d   %12.6f   %12.6f   %s\n", k, model.getTopicPrevalence()[k], coherenceScores[k], corpus.getTerms(model.topTermIds(k)));
 		}
 		
 		

@@ -6,6 +6,7 @@ public class Model {
 	protected int termLimit;
 	protected int numberOfTopics;
 	protected int[][] topTermIds;
+	protected double[] topicPrevalence;
 	
 	public void load() throws IOException {
 		// default
@@ -25,5 +26,9 @@ public class Model {
 	
 	public int numberOfTopics() {
 		return numberOfTopics;
+	}
+
+	public double[] getTopicPrevalence() {
+		return topicPrevalence;
 	}
 }

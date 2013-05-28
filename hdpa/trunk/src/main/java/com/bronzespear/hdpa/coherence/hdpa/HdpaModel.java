@@ -19,6 +19,7 @@ public class HdpaModel extends Model {
 	public void load() throws IOException {
 		h.loadParameters(modelFile);
 		topTermIds = h.topTermIds(CorpusMode.WORD.ordinal(), termLimit);
+		topicPrevalence = h.getTopicWeights();
 		numberOfTopics = h.getK();
 	}
 }
