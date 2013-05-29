@@ -66,11 +66,10 @@ public class EvaluateHdpa {
 		List<HdpaDocument> documents = new ArrayList<HdpaDocument>();
 		int i = 0;
 		for (CorpusDocument document : corpus) {
-			if (i < start) {
-				continue;
+			if (i >= start) {
+				documents.add(new HdpaDocument(document));
 			}
 			
-			documents.add(new HdpaDocument(document));
 			i++;
 			
 			if (i == end) {
