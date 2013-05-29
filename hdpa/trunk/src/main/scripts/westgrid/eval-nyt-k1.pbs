@@ -1,0 +1,21 @@
+#!/bin/bash
+#PBS -S /bin/bash
+#PBS -l walltime=4:00:00
+#PBS -l mem=6g
+#PBS -r n
+#PBS -M jonathan.esterhazy@gmail.com
+#PBS -m bea
+
+cd $PBS_O_WORKDIR
+echo "Current working directory is `pwd`"
+
+echo "Starting run at: `date`"
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.PrintTopics /home/jester/data/nyt-random-t5000-model-b500-k0.5-20130528-0558/final.csv
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.coherence.hdpa.HdpaCoherence /home/jester/data/nyt-random-t5000-model-b500-k0.5-20130528-0558/final.csv
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.EvaluateHdpa 0 2000 /home/jester/data/nyt-random-t5000-model-b500-k0.5-20130528-0558/*.csv
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.EvaluateHdpa 2000 4000 /home/jester/data/nyt-random-t5000-model-b500-k0.5-20130528-0558/*.csv
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.EvaluateHdpa 4000 6000 /home/jester/data/nyt-random-t5000-model-b500-k0.5-20130528-0558/*.csv
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.EvaluateHdpa 6000 8000 /home/jester/data/nyt-random-t5000-model-b500-k0.5-20130528-0558/*.csv
+/home/jester/hdpa/run.sh com.bronzespear.hdpa.EvaluateHdpa 8000 10000 /home/jester/data/nyt-random-t5000-model-b500-k0.5-20130528-0558/*.csv
+echo "Program finished with exit code $? at: `date`"
+
