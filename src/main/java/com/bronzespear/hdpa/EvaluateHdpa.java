@@ -10,14 +10,18 @@ import com.bronzespear.hdpa.corpus.CorpusReader;
 public class EvaluateHdpa {
 	
 	public static void main(String[] args) throws Exception {
-		int testDocumentCount = 2000;
+		int testDocStart = 0;
+		int testDocEnd = 2000;
 		
 		List<File> modelFiles = new ArrayList<File>();
 		
 		for (int i = 0; i < args.length; i++) {
 			switch (i) {
 			case 0:
-				testDocumentCount = Integer.parseInt(args[i]);
+				testDocStart = Integer.parseInt(args[i]);
+				break;			
+			case 1:
+				testDocEnd = Integer.parseInt(args[i]);
 				break;
 			default:
 				File file = new File(args[i]);
@@ -41,7 +45,7 @@ public class EvaluateHdpa {
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);
 		corpus.open();
-		List<HdpaDocument> documents = collectTestDocuments(testDocumentCount, corpus);
+		List<HdpaDocument> documents = collectTestDocuments(testDocStart, testDocEnd, corpus);
 		corpus.close();
 		
 		List<List<HdpaDocument>> splitDocuments = HdpaUtils.splitTestDocuments(documents);			
@@ -57,15 +61,19 @@ public class EvaluateHdpa {
 		eval.close();
 	}
 
-	private static List<HdpaDocument> collectTestDocuments(int testDocumentCount,
+	private static List<HdpaDocument> collectTestDocuments(int start, int end,
 			CorpusReader corpus) {
 		List<HdpaDocument> documents = new ArrayList<HdpaDocument>();
 		int i = 0;
 		for (CorpusDocument document : corpus) {
+			if (i < start) {
+				continue;
+			}
+			
 			documents.add(new HdpaDocument(document));
 			i++;
 			
-			if (i == testDocumentCount) {
+			if (i == end) {
 				break;
 			}
 		}
