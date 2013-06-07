@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -S /bin/bash
-#PBS -l walltime=4:00:00
+#PBS -l walltime=72:00:00
 #PBS -l mem=6g
 #PBS -r n
 #PBS -M jonathan.esterhazy@gmail.com
