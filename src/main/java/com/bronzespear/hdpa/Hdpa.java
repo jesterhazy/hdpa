@@ -841,8 +841,8 @@ public class Hdpa {
 	}
 
 	public void printTopics(File output) throws IOException {
-		double[] beta = calculateStickWeights(corpusSticks);
-		int[] sortedTopics = argsort(beta, true);
+		double[] topicWeights = calculateStickWeights(corpusSticks);
+		int[] sortedTopics = argsort(topicWeights, true);
 		
 		// output corpus topic weights
 		PrintWriter out = new PrintWriter(output, "UTF-8");
@@ -850,9 +850,9 @@ public class Hdpa {
 		out.println("1. corpus-level topic weights");
 		out.println(repeatString("-", 80));
 		out.println();		
-		out.println("     topic     weight");
+		out.println("topic           weight     terms");
 		for (int k : sortedTopics) {
-			out.printf("     %5d     %.10f\n", k, beta[k]);
+			out.printf("%5d     %12.10f     %s\n", k, topicWeights[k], topTerms(k, CorpusMode.WORD.ordinal(), 10));
 		}
 		
 		out.println();
@@ -863,7 +863,7 @@ public class Hdpa {
 		out.println();
 
 		for (int k : sortedTopics) {
-			out.printf("     topic: %5d (%.10f)\n", k, beta[k]);
+			out.printf("     topic: %5d (%.10f)\n", k, topicWeights[k]);
 			
 			for (int m = 0; m < M; m++) {
 				out.printf("     mode: %s\n\n", CorpusMode.values()[m].name().toLowerCase());
