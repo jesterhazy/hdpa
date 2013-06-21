@@ -27,7 +27,6 @@ public class LemmaNerDocument extends DocumentDecorator {
 	private static final String NE_TYPE_PERSON = "PERSON";
 	private static final List<String> TARGET_ENTITY_TYPES = Arrays.asList(NE_TYPE_PERSON, NE_TYPE_ORGANIZATION, NE_TYPE_LOCATION);
 	private Map<String, List<String>> entityMap = new HashMap<String, List<String>>();
-	
 
 	private static StanfordCoreNLP pipeline;
 	
@@ -51,8 +50,9 @@ public class LemmaNerDocument extends DocumentDecorator {
 		initialize();
 	}
 	
-	public List<String> getWords() {
-		return words;
+	@Override
+	public List<String> getTerms(CorpusMode mode) {
+		return (CorpusMode.WORD == mode) ? words : super.getTerms(mode);
 	}
 
 	private void initialize() {

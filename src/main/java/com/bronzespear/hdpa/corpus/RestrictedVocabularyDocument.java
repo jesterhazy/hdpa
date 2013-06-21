@@ -21,11 +21,6 @@ public class RestrictedVocabularyDocument extends DocumentDecorator {
 	}
 	
 	@Override
-	public boolean isEmpty() {
-		return getTerms(CorpusMode.WORD).isEmpty();
-	}
-	
-	@Override
 	public List<String> getTerms(CorpusMode mode) {
 		if (filteredMap.get(mode) == null) {
 			List<String> unfilteredList = super.getTerms(mode);
