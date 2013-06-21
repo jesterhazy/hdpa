@@ -28,24 +28,14 @@ public class LemmatizedDocument extends DocumentDecorator {
 	}
 	
 	private List<String> words = new ArrayList<String>();
-	private boolean initialized;
 	
 	public LemmatizedDocument(Document doc) {
 		super(doc);
+		initialize();
 	}
 	
-	public List<String> getWords() {
-		if (!initialized) {
-			lemmatize();
-		}
-		
-		return words;
-	}
-
-	private void lemmatize() {		
+	private void initialize() {		
 		LOG.debug("lemmatizing document");
-		initialized = true;
-		
 		try {
 			Annotation doc = new Annotation(getText());
 			pipeline.annotate(doc);
@@ -70,5 +60,10 @@ public class LemmatizedDocument extends DocumentDecorator {
 		}
 		
 		LOG.debug("done lemmatizing");
+	}
+	
+	@Override
+	public List<String> getTerms(CorpusMode mode) {
+		return (CorpusMode.WORD == mode) ? words : super.getTerms(mode);
 	}
 }

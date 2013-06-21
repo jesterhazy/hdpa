@@ -2,7 +2,7 @@ package com.bronzespear.hdpa.corpus;
 
 import java.util.List;
 
-public class DocumentDecorator implements Document {
+public class DocumentDecorator extends Document {
 	private final Document doc;
 	
 	public DocumentDecorator(Document doc) {
@@ -24,31 +24,11 @@ public class DocumentDecorator implements Document {
 	public String getText() {
 		return doc.getText();
 	}
-
-	public List<String> getWords() {
-		return doc.getWords();
-	}
-
-	public List<String> getLocations() {
-		return doc.getLocations();
-	}
-
-	public List<String> getOrganizations() {
-		return doc.getOrganizations();
-	}
-
-	public List<String> getPersons() {
-		return doc.getPersons();
-	}
 	
 	public Document getDocument() {
 		return doc;
 	}
 	
-	public boolean isEmpty() {
-		return doc.isEmpty();
-	}
-
 	public List<String> getTerms(CorpusMode mode) {
 		return doc.getTerms(mode);
 	}

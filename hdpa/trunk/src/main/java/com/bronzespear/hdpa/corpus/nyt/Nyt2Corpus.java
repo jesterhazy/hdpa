@@ -54,9 +54,7 @@ public class Nyt2Corpus {
 				
 				// regex and stopword filters
 				doc = new FilteredDocument(doc);
-//
-//				doc = new TestDocument(doc);
-//				
+				
 				if (doc.getWords().isEmpty()) {
 					LOG.debug("skipping empty document: " + tgzIter.currentEntryName());
 				}

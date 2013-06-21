@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 
-public class CorpusDocument implements Document, Serializable {
+public class CorpusDocument extends Document implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -35,22 +35,6 @@ public class CorpusDocument implements Document, Serializable {
 
 	public String getText() {
 		return text;
-	}
-	
-	public List<String> getWords() {
-		return getTerms(CorpusMode.WORD);
-	}
-
-	public List<String> getLocations() {
-		return getTerms(CorpusMode.LOCATION);
-	}
-
-	public List<String> getOrganizations() {
-		return getTerms(CorpusMode.ORGANIZATION);
-	}
-
-	public List<String> getPersons() {
-		return getTerms(CorpusMode.PERSON);
 	}
 	
 	public List<String> getTerms(CorpusMode mode) {

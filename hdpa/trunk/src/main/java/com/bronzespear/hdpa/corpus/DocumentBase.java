@@ -1,10 +1,11 @@
 package com.bronzespear.hdpa.corpus;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DocumentBase implements Document {
+public class DocumentBase extends Document {
 	private Integer id;
 	private String title;
 	private String text;
@@ -44,49 +45,36 @@ public class DocumentBase implements Document {
 	}
 	
 	public List<String> getTerms(CorpusMode mode) {
-		return terms.get(mode);
+		List<String> list = terms.get(mode);
+		
+		if (list == null) {
+			list = new ArrayList<String>();
+			terms.put(mode, list);
+		}
+		
+		return list;
 	}
 	
 	public void setTerms(CorpusMode mode, List<String> terms) {
 		this.terms.put(mode, terms);
 	}
 	
-	public List<String> getWords() {
-		return getTerms(CorpusMode.WORD);
-	}
-	
 	public void setWords(List<String> words) {
 		setTerms(CorpusMode.WORD, words);
 	}
 	
-	public List<String> getPersons() {
-		return getTerms(CorpusMode.PERSON);
-	}
-
 	public void setPersons(List<String> persons) {
 		setTerms(CorpusMode.PERSON, persons);
-	}
-
-	public List<String> getOrganizations() {
-		return getTerms(CorpusMode.ORGANIZATION);
 	}
 
 	public void setOrganizations(List<String> organizations) {
 		setTerms(CorpusMode.ORGANIZATION, organizations);
 	}
 
-	public List<String> getLocations() {
-		return getTerms(CorpusMode.LOCATION);
-	}
-
 	public void setLocations(List<String> locations) {
 		setTerms(CorpusMode.LOCATION, locations);
 	}
-	
-	public boolean isEmpty() {
-		return getWords().isEmpty();
-	}
-	
+
 	protected void addWords(List<String> words) {
 		addTerms(CorpusMode.WORD, words);
 	}
