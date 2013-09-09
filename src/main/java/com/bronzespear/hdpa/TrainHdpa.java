@@ -11,6 +11,7 @@ public class TrainHdpa {
 		int skipDocumentCount = 0;
 		int batchSize = 500;
 		double kappa = 0.9;
+		int modes = 0;
 		int saveFrequency = 0;
 		int hourLimit = 0;
 
@@ -29,9 +30,12 @@ public class TrainHdpa {
 				kappa = Double.parseDouble(args[i]);
 				break;
 			case 4:
-				saveFrequency = Integer.parseInt(args[i]);
+				modes = Integer.parseInt(args[i]);
 				break;
 			case 5:
+				saveFrequency = Integer.parseInt(args[i]);
+				break;
+			case 6:
 				hourLimit = Integer.parseInt(args[i]);
 				break;
 			default:
@@ -48,6 +52,10 @@ public class TrainHdpa {
 		
 		CorpusReader corpus = new CorpusReader(corpusFile);		
 		Hdpa h = new Hdpa(corpus);
+		
+		if (modes > 0) {
+			h.setModeCount(modes);
+		}
 		
 		if (saveFrequency > 0) {
 			h.setSaveFrequency(saveFrequency);

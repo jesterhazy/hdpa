@@ -170,8 +170,11 @@ public class Hdpa {
 		corpus.open();
 		
 		this.D = corpus.getDocumentCount();
-		this.M = corpus.getModeCount(); 
-//		this.M = 1; // use this to limit training to mode 0 (words)
+
+		// set number of modes, if it is not already set
+		if (M == 0) {
+			this.M = corpus.getModeCount(); 
+		}
 		
 		this.W = new int[M];
 		this.eta = 0.01d; // Wang2011
@@ -1112,5 +1115,9 @@ public class Hdpa {
 		}
 		
 		return terms;
+	}
+
+	void setModeCount(int modeCount) {
+		this.M = modeCount;
 	}
 }
