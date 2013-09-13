@@ -65,7 +65,7 @@ createLikelihoodChart <- function(targetdir, title, hdpa, ohdp) {
 
 createCoherenceChart <- function(targetdir, title, hdpa, ohdp) {
 	chartfile <- tolower(gsub("$", ".pdf", gsub(" ", "-", title)))
-	pdf(paste(targetdir, chartfile, sep='/'), width=3, height=3)
+	pdf(paste(targetdir, chartfile, sep='/'), width=4, height=4)
 
 	xrange <- range(0, 300)
 	yrange <- range(min(hdpa$coherence, ohdp$coherence), max(hdpa$coherence, ohdp$coherence))
