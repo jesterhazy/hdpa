@@ -1,8 +1,8 @@
 datadir <- '/Users/jonathan/Desktop/data'
 
 files <- matrix(c(
-	'nyt-random-t5000-model-b500-k0.9-20130529-0546', 'coherence-20130531-0455.txt', 'eval-20130531-0756.txt',
-	'nan-random-t5000-model-b500-k0.9-20130529-0546', 'coherence-20130530-1952.txt', 'eval-20130530-2209.txt'
+	'nyt-random-t5000-model-b500-k0.9-20130529-0546', 'coherence-20130531-0455.txt', 'eval-20130531-0600.txt',
+	'nan-random-t5000-model-b500-k0.9-20130529-0546', 'coherence-20130530-1952.txt', 'eval-20130530-2108.txt'
 ), 2, 3, byrow=T)
 
 
